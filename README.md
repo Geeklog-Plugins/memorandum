@@ -20,6 +20,7 @@
 8. Plugin Lifecycle: Installation, Upgrades, and Migrations
 9. Integrating with Core Hooks (The Plugin API)
 10. Error Handling and Logging
+11. Addendum: Ongoing Refinements and Strict Security Patterns
 
 ---
 
@@ -507,6 +508,69 @@ if (!$result) {
 * **Access Violations:** Use `COM_accessLog()` to log unauthorized attempts to access plugin administration.
 
 ---
+
+## 11. Addendum: Ongoing Refinements and Strict Security Patterns
+
+As Geeklog and PHP continue to evolve, the following specific edge cases and strict coding patterns must be adhered to during plugin development and refactoring:
+
+### 11.1. Date Functions (PHP 8.1+ Compatibility)
+
+The `strftime()` function is officially deprecated as of PHP 8.1. Its continued use will generate deprecation notices and eventually trigger fatal errors under strict server configurations.
+
+* **Legacy Code:** `strftime('%Y')`
+* **Modern Standard:** Always use the native `date()` function for standard time formatting (e.g., `date('Y')`).
+
+### 11.2. Language Arrays and Null Coalescing (PHP 8 Strictness)
+
+Under PHP 8, referencing an undefined key in a language array (e.g., `$LANG_FOOBAR_1['missing_key']`) will throw a `Warning`, which can break UI rendering or interrupt JSON/AJAX responses. This commonly occurs when a plugin's core code is updated but the localized language files (like `french.php`) have not yet been synced by translators.
+
+* **Modern Standard:** Always use the Null Coalescing Operator (`??`) to provide a safe, hardcoded fallback string when accessing language variables.
+* **Implementation:**
+```php
+// Unsafe (Will throw a Warning if the key is missing):
+$welcome = $LANG_FOOBAR_1['welcome'];
+
+// Safe (PHP 8 compliant):
+$welcome = $LANG_FOOBAR_1['welcome'] ?? 'Default welcome message';
+
+```
+
+
+
+### 11.3. CSRF Form Token Naming
+
+All HTML forms that submit or modify data must include a CSRF token. Crucially, the Geeklog core validation function `SEC_checkToken()` specifically looks for the `gltoken` key in the `$_POST` payload.
+
+* **Modern Standard:** Your hidden input field must specifically be named `gltoken`. Generic names (like `token` or `csrf_token`) will cause the core validation to fail, rejecting valid form submissions.
+* **Implementation:**
+```html
+<input type="hidden" name="gltoken" value="<?php echo SEC_createToken(); ?>" />
+
+```
+
+
+
+### 11.4. Standardized Access Control Rejection
+
+When protecting administration pages and secure endpoints via `SEC_hasRights()`, you must gracefully handle unauthorized access by logging the specific attempt and using the core UI messaging variables (`$MESSAGE`) for consistency across the CMS.
+
+* **Modern Standard:** Use `COM_showMessageText` for the UI, `COM_accessLog` for security auditing, and `COM_output` to render the page before exiting the script.
+* **Implementation:**
+```php
+global $MESSAGE, $_USER;
+
+if (!SEC_hasRights('foobar.admin')) {
+    $display = COM_showMessageText($MESSAGE[29], $MESSAGE[30]);
+    $display = COM_createHTMLDocument($display, array('pagetitle' => $MESSAGE[30]));
+
+    $username = isset($_USER['username']) ? $_USER['username'] : 'Anonymous';
+    COM_accessLog("User {$username} tried to illegally access the foobar administration screen.");
+
+    COM_output($display);
+    exit;
+}
+
+```
 
 **End of Memorandum.**
 *Compliance with these standards is expected for all PRs submitted to the Geeklog-Plugins repository.*
