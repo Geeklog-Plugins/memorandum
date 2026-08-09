@@ -17,7 +17,7 @@
 5. Database API & Query Optimization
 6. Security Posture: XSS, CSRF, and Access Control
 7. The Template API (PHPLib Template integration)
-8. Plugin Lifecycle: Installation, Upgrades, and Migrations
+8. Plugin Lifecycle: Installation, Upgrades, Migrations, and Persistent Storage
 9. Integrating with Core Hooks (The Plugin API)
 10. Error Handling and Logging
 11. Addendum: Ongoing Refinements and Strict Security Patterns
@@ -462,6 +462,126 @@ function plugin_upgrade_maintenance($current_version) {
 }
 
 ```
+
+### 8.2. Persistent Plugin Data and `$_CONF['path_data']` (Geeklog 2.2.2)
+
+Persistent plugin data **must not be stored under `$_CONF['path_data']` in Geeklog 2.2.2** unless the core behavior changes and the lifecycle of this directory is explicitly documented.
+
+This recommendation follows [Geeklog issue #1171](https://github.com/Geeklog-Core/geeklog/issues/1171), which documents that the administrator **Clear Cache** action in Geeklog 2.2.2 performs a broad cleanup of `$_CONF['path_data']`.
+
+The current core sequence includes:
+
+```php
+Geeklog\Cache::clear();
+
+$leave_dirs = array('cache', 'layout_cache', 'layout_css');
+$leave_files = array('cacert.pem', 'README');
+
+COM_cleanDirectory(
+    $_CONF['path_data'],
+    $leave_dirs,
+    $leave_files
+);
+
+PLG_clearCache();
+```
+
+As a consequence, a directory such as:
+
+```text
+data/myplugin/
+```
+
+can be removed when an administrator selects **Clear Cache**, even when it contains persistent application data rather than cache files.
+
+The plugin cache hook is executed only after the cleanup, so a plugin cannot use `PLG_clearCache()` to protect its persistent directory.
+
+Legacy Geeklog plugins and themes have historically used subdirectories of the private `data/` directory because it provides a convenient location outside the public Web root.
+
+Developers modernizing these extensions must therefore audit all uses of `$_CONF['path_data']` and clearly distinguish **persistent data** from **cache or temporary data**.
+
+#### Modern Storage Standard
+
+* **Persistent data:** Store it in a dedicated private location outside both `$_CONF['path_data']` and `$_CONF['path_html']`, or use the database when appropriate.
+* **Configuration values:** Prefer Geeklog's native Configuration API instead of custom JSON or PHP configuration files whenever practical.
+* **Cache data:** Treat cache content as disposable.
+* **Do not use `data/cache/<plugin>/` for persistent data.** `Geeklog\Cache::clear()` may remove its contents.
+* **Public media:** Store only files that must be Web-accessible under explicitly controlled directories in `public_html`, with strict extension, MIME, filename, permission, and upload validation.
+* **Secrets and private files:** Never place API credentials, private JSON stores, logs, internal state, or other sensitive files under the public Web root.
+
+A dedicated private plugin-data directory can, for example, be constructed outside `path_data`:
+
+```php
+$pluginDataRoot = rtrim($_CONF['path'], '/\\')
+    . DIRECTORY_SEPARATOR . 'plugin-data'
+    . DIRECTORY_SEPARATOR . 'myplugin'
+    . DIRECTORY_SEPARATOR;
+```
+
+A custom location may also be supported, but it must be validated.
+
+At minimum:
+
+* reject null bytes;
+* reject `..` path traversal sequences;
+* require an absolute path or a trusted path derived from Geeklog configuration;
+* ensure persistent storage is outside `$_CONF['path_html']`;
+* ensure persistent storage is outside `$_CONF['path_data']` while issue #1171 remains relevant.
+
+#### Migrating Legacy `data/<plugin>/` Storage
+
+When modernizing a plugin that previously stored persistent data in:
+
+```text
+data/myplugin/
+```
+
+do **not** simply change the storage path.
+
+Existing installations may already contain important data there.
+
+The upgrade process should:
+
+1. Detect the legacy storage directory.
+2. Create the new private storage directory with restrictive permissions.
+3. Copy or migrate files using validated relative paths.
+4. Validate migrated files before considering the migration successful.
+5. Record the migration state so it is not repeated unnecessarily.
+6. Preserve the legacy copy until the new storage has been verified.
+7. Avoid deleting user data automatically after a failed or partial migration.
+
+Example:
+
+```php
+$legacyRoot = rtrim($_CONF['path_data'], '/\\')
+    . DIRECTORY_SEPARATOR . 'myplugin'
+    . DIRECTORY_SEPARATOR;
+
+$newRoot = rtrim($_CONF['path'], '/\\')
+    . DIRECTORY_SEPARATOR . 'plugin-data'
+    . DIRECTORY_SEPARATOR . 'myplugin'
+    . DIRECTORY_SEPARATOR;
+
+if (is_dir($legacyRoot) && !is_dir($newRoot)) {
+    // Create the destination securely, then perform a validated,
+    // non-destructive migration before switching the plugin to $newRoot.
+}
+```
+
+Do not rely on `rename()` as the only migration strategy without validation and recovery handling.
+
+Filesystem permissions, cross-filesystem moves, interrupted requests, or partial failures must not leave the plugin without access to its persistent data.
+
+#### Compatibility Rule
+
+Until Geeklog provides an official persistent-storage API or changes the cleanup behavior described in issue #1171, plugin developers should assume:
+
+> **Everything stored directly under `$_CONF['path_data']` may be treated as disposable by Geeklog's Clear Cache operation.**
+
+This rule is intentionally conservative.
+
+It protects modernized plugins on unpatched Geeklog 2.2.2 installations and reduces the risk of administrators losing application data through an action presented as cache maintenance.
+
 
 ---
 
