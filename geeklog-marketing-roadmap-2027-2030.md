@@ -1,10 +1,21 @@
 # Addendum — Geeklog Marketing Plugin Roadmap 2027–2030
 
+## Status
+
+**Architectural concept / future project.**
+
+This roadmap does not override the current modernization priority for active plugins, which remains:
+
+- Geeklog 2.1.1 through 2.2.2;
+- PHP 5.6 through PHP 8.1.
+
+When Marketing implementation begins, its exact minimum runtime may be reassessed. Until then, active plugin modernization should not depend on Marketing.
+
 ## Objective
 
 Build a native, self-hosted **Marketing Automation layer for Geeklog** designed for the 2027–2030 ecosystem.
 
-The plugin should not attempt to reproduce a complete SaaS platform such as HubSpot. Its role is to provide Geeklog with a common first-party marketing infrastructure that can be used by content and business plugins.
+The plugin should not attempt to reproduce a complete SaaS platform such as HubSpot. Its role is to provide first-party marketing capabilities that consume structured activity from Geeklog and its plugins.
 
 Core principle:
 
@@ -12,7 +23,7 @@ Core principle:
 Collect → Understand → Segment → Automate → Convert
 ```
 
-The Marketing plugin should become the common marketing layer for Geeklog plugins such as:
+Marketing may eventually consume activity from:
 
 ```text
 Stories
@@ -32,41 +43,41 @@ and future plugins
 
 ## Architectural Principles
 
-The architecture must be designed around a few long-lived foundations:
+1. **Consume common Geeklog events rather than become the universal event bus.**
+2. **Use first-party visitor and customer data.**
+3. **Expose a stable Marketing API for Marketing-specific capabilities.**
+4. **Privacy and consent by design.**
+5. **Strict multisite isolation.**
+6. **External providers through adapters.**
+7. **No mandatory external SaaS.**
+8. **AI remains optional.**
+9. **Marketing works without AI.**
+10. **Other plugins must never access Marketing database tables directly.**
 
-1. **Event-driven architecture**
-2. **First-party visitor and customer data**
-3. **Stable public API for other Geeklog plugins**
-4. **Privacy and consent by design**
-5. **Strict multisite isolation**
-6. **External providers through adapters**
-7. **No mandatory external SaaS**
-8. **AI must remain optional**
-9. **Marketing features must work without AI**
-10. **Plugins must never access Marketing database tables directly**
-
-The three most important elements to freeze before development are:
+The most important elements to freeze before implementation are:
 
 ```text
-Database schema
-      ↓
-Universal event format
-      ↓
-Public Marketing API
+Common Geeklog event contract
+          ↓
+Marketing data model
+          ↓
+Marketing public API
 ```
+
+The common event contract belongs to the wider Geeklog architecture. Marketing is one consumer of it alongside Analytics, Notifications, Recommendations and external integrations.
 
 ---
 
 # Phase 0 — Foundation and Architecture
 
-**Priority: Critical**
+**Priority when project becomes active: Critical**
 
 Define the technical foundation before implementing visible marketing features.
 
 ### Requirements
 
-- Geeklog 2.2.2 architecture;
-- PHP 8.1+;
+- current Geeklog plugin architecture;
+- explicit minimum PHP version chosen at implementation time;
 - mono-site support;
 - multisite support;
 - strict site-level data isolation;
@@ -75,22 +86,8 @@ Define the technical foundation before implementing visible marketing features.
 - secure data storage;
 - retention and anonymization strategy;
 - installation and upgrade paths;
-- plugin API conventions.
-
-Suggested structure:
-
-```text
-marketing/
-├── admin/
-├── api/
-├── classes/
-├── language/
-├── sql/
-├── templates/
-├── integrations/
-├── functions.inc
-└── autoinstall.php
-```
+- public API conventions;
+- compatibility with the common Geeklog event contract.
 
 ### Deliverable
 
@@ -98,150 +95,107 @@ A documented architecture and initial database schema.
 
 ---
 
-# Phase 1 — Universal Event API
+# Phase 1 — Event Consumption and Marketing Tracking
 
-**Priority: Critical**
+Marketing should consume a future common Geeklog event contract rather than require every plugin to call a Marketing-specific event function.
 
-Create the central API used by Geeklog and third-party plugins.
-
-Initial concept:
-
-```php
-MARKETING_event($event, $data);
-```
-
-Standard events should include:
+Preferred future flow:
 
 ```text
-page_view
-article_view
-search
-download
-form_submit
-user_register
-login
-
-product_view
-cart_add
-purchase
-
-document_view
-document_download
-
-video_view
-video_complete
-
-contact_request
+Store / Documents / Videos / Core
+              ↓
+       Geeklog Event Layer
+              ↓
+     ┌────────┼─────────┐
+ Marketing  Analytics  Notifications
 ```
 
-Each event should support a common envelope:
+Possible common event names:
+
+```text
+content.article.viewed
+content.search.performed
+user.registered
+user.logged_in
+
+documents.file.viewed
+documents.file.downloaded
+
+videos.video.viewed
+videos.video.completed
+
+store.product.viewed
+store.cart.item_added
+store.order.completed
+
+contact.request.created
+```
+
+Marketing may expose a dedicated function for events that are strictly internal to Marketing, but `MARKETING_event()` should not become the ecosystem-wide event bus.
+
+A common event envelope should eventually support fields such as:
 
 ```text
 event_id
 event_type
 timestamp
-
 site_id
-visitor_id
-session_id
 uid
-
 object_type
 object_id
-
 source
 metadata
 ```
 
-### Rule
-
-Plugins should submit business events but should not need to understand how Marketing stores or processes them.
-
-Example:
-
-```php
-MARKETING_event('purchase', array(
-    'object_type' => 'product',
-    'object_id'   => $productId,
-    'value'       => $amount
-));
-```
+Marketing can enrich eligible events with its own visitor/session context after consent rules are applied.
 
 ---
 
 # Phase 2 — Anonymous Visitor Identity
 
-Introduce an anonymous:
-
-```text
-visitor_id
-```
-
-capable of linking several interactions to the same visitor where permitted.
+Introduce an anonymous `visitor_id` capable of linking eligible interactions to the same visitor where permitted.
 
 The system should distinguish:
 
 ```text
-Anonymous visitor
-        ↓
-visitor_id
-
-Known Geeklog user
-        ↓
-uid
+Anonymous visitor → visitor_id
+Known Geeklog user → uid
 ```
 
-When identification becomes possible:
-
-```text
-visitor_id
-     ↓
-Geeklog uid
-```
-
-The system may associate previous eligible activity with the known profile according to consent and retention rules.
+When identification becomes possible, Marketing may associate eligible activity with a known profile according to consent and retention rules.
 
 ---
 
 # Phase 3 — Marketing Profiles
 
-Create a unified marketing profile.
-
-Initial profile properties:
+Create a Marketing-specific profile containing properties such as:
 
 ```text
 uid
 visitor_id
-
 first_seen
 last_seen
-
 first_source
 last_source
-
 first_landing_page
 last_landing_page
-
 visit_count
 event_count
-
 score
 tags
 segments
 consents
 ```
 
-The profile becomes the common representation of an audience member.
-
-It should complement Geeklog's user table rather than duplicate the Geeklog account system.
+The Marketing profile is not the canonical Geeklog identity layer. It complements Geeklog users and any future Entity/Knowledge layer.
 
 ---
 
 # Phase 4 — Consent and Privacy Layer
 
-**Must exist before behavioral profiling becomes extensive.**
+This must exist before extensive behavioral profiling.
 
-Initial consent categories:
+Initial consent categories may include:
 
 ```text
 analytics
@@ -260,13 +214,7 @@ source
 policy_version
 ```
 
-The event infrastructure must be capable of determining whether an event can:
-
-- be collected;
-- remain anonymous;
-- be associated with a profile;
-- be used for personalization;
-- trigger marketing communication.
+Marketing must determine whether an event may be collected, associated with a profile, used for personalization or used to trigger communication.
 
 ---
 
@@ -280,51 +228,17 @@ utm_medium
 utm_campaign
 utm_term
 utm_content
-
 referrer
 landing_page
 ```
 
-Maintain initially:
-
-```text
-first_touch
-last_touch
-```
-
-This provides the foundation for answering:
-
-```text
-Where did this visitor come from?
-
-Which campaign generated the lead?
-
-Which acquisition source generated the purchase?
-```
-
-Advanced multi-touch attribution should come later.
+Start with first-touch and last-touch attribution. Advanced multi-touch attribution comes later.
 
 ---
 
 # Phase 6 — Tags
 
-Implement reusable profile tags.
-
-Examples:
-
-```text
-customer
-prospect
-newsletter
-
-interest:rocket-stove
-interest:libreoffice
-
-high-engagement
-repeat-customer
-```
-
-Public API:
+Implement reusable profile tags and a stable Marketing API such as:
 
 ```php
 MARKETING_addTag();
@@ -332,38 +246,15 @@ MARKETING_removeTag();
 MARKETING_hasTag();
 ```
 
-Tags should be usable by:
-
-- segmentation;
-- automation;
-- personalization;
-- external integrations.
+Tags can support segmentation, automation, personalization and integrations.
 
 ---
 
 # Phase 7 — Dynamic Segmentation
 
-Create a generic rules engine.
+Create a simple generic rules engine before considering a visual workflow builder.
 
-Example:
-
-```text
-article topic = rocket-stove
-AND
-article views >= 3
-AND
-period <= 30 days
-AND
-purchase = false
-```
-
-Result:
-
-```text
-Rocket Stove Prospects
-```
-
-Initial operators:
+Initial operators may include:
 
 ```text
 =
@@ -375,37 +266,13 @@ exists
 within_days
 ```
 
-Start with a simple rule editor.
-
-Do not make the first version dependent on a complex visual workflow builder.
-
 ---
 
 # Phase 8 — Lead and Engagement Scoring
 
-Allow administrators to assign weights to events.
+Allow administrators to assign weights to eligible events and define decay or negative rules.
 
-Example:
-
-| Event | Score |
-|---|---:|
-| Article view | +1 |
-| Internal search | +2 |
-| Newsletter subscription | +5 |
-| Document download | +5 |
-| Product view | +5 |
-| Contact request | +20 |
-| Purchase | +30 |
-
-Support negative or decay rules:
-
-```text
-90 days inactivity → -10
-```
-
-The score should become a standard profile property available through the public API.
-
-Example:
+Expose the resulting score through the Marketing API, for example:
 
 ```php
 MARKETING_getScore($uid);
@@ -413,157 +280,54 @@ MARKETING_getScore($uid);
 
 ---
 
-# Phase 9 — Public Plugin API
+# Phase 9 — Public Marketing API
 
-Before advanced features are developed, freeze a stable integration layer.
+Freeze a stable integration layer for Marketing-specific capabilities.
 
-Initial public functions may include:
+Possible functions include:
 
 ```php
-MARKETING_event();
-
 MARKETING_getProfile();
-
 MARKETING_addTag();
 MARKETING_removeTag();
 MARKETING_hasTag();
-
 MARKETING_getScore();
-
 MARKETING_hasSegment();
 ```
 
-The API should be stable enough for other plugins to depend upon it.
-
-### Integration examples
-
-Store:
-
-```text
-product_view
-cart_add
-purchase
-```
-
-Documents:
-
-```text
-document_view
-document_download
-```
-
-Videos:
-
-```text
-video_view
-video_complete
-```
-
-Contact:
-
-```text
-contact_request
-lead_created
-```
-
-Core Stories:
-
-```text
-article_view
-topic_interest
-```
-
-Internal Search:
-
-```text
-search
-```
+Business plugins should publish common Geeklog events rather than depend directly on this API unless they explicitly need a Marketing-specific operation.
 
 ---
 
 # Phase 10 — Webhooks and External Integration
 
-Add an event publication system.
-
-Initial outgoing events:
+Add outgoing integration events for Marketing-owned state changes, such as:
 
 ```text
-event.created
-profile.created
-profile.updated
-
-purchase.completed
-
-segment.entered
-segment.left
-
-score.changed
+marketing.profile.created
+marketing.profile.updated
+marketing.segment.entered
+marketing.segment.left
+marketing.score.changed
 ```
 
-This enables integration with:
-
-```text
-n8n
-Make
-Zapier
-
-CRM systems
-email platforms
-analytics platforms
-business applications
-```
-
-Geeklog should therefore remain useful even when an external automation system is preferred.
+This can connect Geeklog to tools such as n8n, Make, Zapier, CRM systems and email platforms.
 
 ---
 
 # Phase 11 — Marketing Dashboard
 
-Once reliable data exists, expose an administration dashboard.
-
-Initial indicators:
-
-```text
-Visitors
-Known profiles
-New contacts
-
-Events
-Conversions
-
-Acquisition sources
-Campaigns
-
-Top content
-Top interests
-
-Segments
-Lead scores
-```
-
-Initial funnels may include:
-
-```text
-Visit
- ↓
-Content
- ↓
-Download
- ↓
-Registration
- ↓
-Purchase
-```
+Once reliable data exists, expose an administration dashboard for visitors, profiles, conversions, acquisition sources, campaigns, content interests, segments and lead scores.
 
 ---
 
 # Milestone — Marketing 1.0
 
-Marketing 1.0 should represent a **data and intelligence foundation**, not a full marketing suite.
+Marketing 1.0 should represent a **data and intelligence foundation**, not a complete marketing suite.
 
 | Capability | 1.0 |
 |---|---|
-| Event API | ✓ |
+| Common event consumption | ✓ |
 | Anonymous Visitor ID | ✓ |
 | Marketing Profiles | ✓ |
 | Consent | ✓ |
@@ -572,22 +336,18 @@ Marketing 1.0 should represent a **data and intelligence foundation**, not a ful
 | Tags | ✓ |
 | Dynamic Segments | ✓ |
 | Lead Scoring | ✓ |
-| Public Plugin API | ✓ |
+| Public Marketing API | ✓ |
 | Webhooks | ✓ |
 | Basic Dashboard | ✓ |
 | Email campaigns | — |
 | Automation workflows | — |
 | AI | — |
 
-This milestone is important because all later functionality depends on trustworthy data.
-
 ---
 
 # Marketing 1.1 — Conversion Layer
 
-Build user-facing conversion tools.
-
-### Features
+Possible features:
 
 - marketing forms;
 - newsletter forms;
@@ -597,21 +357,11 @@ Build user-facing conversion tools.
 - conditional CTA;
 - Smart Blocks;
 - conditional content;
-- simple landing-page helpers;
+- landing-page helpers;
 - funnels;
 - customer journey visualization.
 
-Example:
-
-```text
-IF
-segment = rocket-stove-prospect
-
-THEN
-display CTA = rocket-stove-guide
-```
-
-Geeklog Blocks should be considered a natural integration point for conditional marketing content.
+Geeklog Blocks are a natural integration point for conditional content.
 
 ---
 
@@ -620,58 +370,12 @@ Geeklog Blocks should be considered a natural integration point for conditional 
 Introduce:
 
 ```text
-Trigger
-   ↓
-Conditions
-   ↓
-Actions
+Trigger → Conditions → Actions
 ```
 
-Example:
+Initial triggers may include events, tags, segment changes, score thresholds, registrations, purchases, inactivity and dates.
 
-```text
-document_download
-        ↓
-wait 2 days
-        ↓
-purchase = false
-        ↓
-send webhook
-        ↓
-add tag
-        ↓
-score +5
-```
-
-Initial triggers:
-
-```text
-event
-tag added
-segment entered
-score reached
-registration
-purchase
-inactivity
-date
-```
-
-Initial actions:
-
-```text
-add tag
-remove tag
-
-change score
-
-call webhook
-
-send notification
-
-start workflow
-
-send email
-```
+Initial actions may include tag changes, score changes, webhooks, notifications, workflows and email actions.
 
 The automation engine must not depend on a specific email provider.
 
@@ -679,121 +383,53 @@ The automation engine must not depend on a specific email provider.
 
 # Marketing 1.3 — Email Marketing
 
-Add campaign and lifecycle email management.
+Add campaign and lifecycle email management through provider adapters rather than hard-coding one service.
 
-Geeklog Marketing should manage:
-
-```text
-Campaign
-Audience
-Segment
-Template
-Automation
-Statistics
-```
-
-Delivery should use provider adapters.
-
-Possible adapters:
-
-```text
-SMTP
-Brevo
-Amazon SES
-Mailgun
-Postmark
-Resend
-Other providers
-```
-
-Provider-specific code must remain isolated from the marketing engine.
-
-Initial features:
-
-- newsletters;
-- segmented campaigns;
-- transactional marketing messages;
-- welcome sequences;
-- nurturing sequences;
-- reactivation campaigns;
-- post-purchase sequences.
+Possible adapters include SMTP, Brevo, Amazon SES, Mailgun, Postmark, Resend and future providers.
 
 ---
 
 # Marketing 1.4 — Optimization and Intelligence
 
-Add advanced measurement and optimization.
-
-### Features
+Possible features:
 
 - A/B testing;
 - CTA testing;
 - email testing;
 - conversion attribution;
 - advanced funnels;
-- customer journey;
 - cohorts;
 - content recommendations;
 - product recommendations;
 - behavioral recommendations.
 
-Multi-touch attribution can be introduced here.
-
 ---
 
 # Marketing 2.x — AI-Assisted Marketing
 
-**Target: later 2028–2030 development**
+AI should be implemented later through a replaceable provider abstraction.
 
-AI should be implemented through a provider abstraction.
+Marketing must remain fully functional without an AI provider.
 
-Concept:
-
-```text
-Marketing
-   ↓
-AI Provider API
-   ├── OpenAI
-   ├── Anthropic
-   ├── Gemini
-   ├── Mistral
-   ├── Local model
-   └── Custom API
-```
-
-The Marketing plugin must remain fully functional without an AI provider.
-
-Potential AI-assisted functions:
-
-- segment suggestions;
-- behavioral pattern detection;
-- intent classification;
-- campaign suggestions;
-- campaign content generation;
-- performance summaries;
-- content recommendations;
-- customer journey analysis;
-- next-best-action recommendations.
-
-AI should advise or enhance the marketing engine rather than become its architectural foundation.
+Potential AI-assisted functions include segment suggestions, behavioral pattern detection, intent classification, campaign suggestions, performance summaries, recommendations and next-best-action assistance.
 
 ---
 
-# 2027–2030 Development Sequence
+# Development sequence
 
 ```text
-FOUNDATION
+COMMON GEEKLOG CONTRACTS
 │
-├── Architecture / Multisite
-├── Database Schema
-├── Event Format
-├── Public API
+├── Event contract
+├── Multisite rules
+├── Data/API conventions
 │
 ▼
-DATA
+MARKETING FOUNDATION
 │
-├── Events
-├── Visitor Identity
+├── Data model
+├── Event consumption
+├── Visitor identity
 ├── Profiles
 ├── Consent
 ├── Acquisition
@@ -809,12 +445,12 @@ INTELLIGENCE
 ▼
 INTEGRATION
 │
-├── Plugin API
+├── Marketing API
 ├── Webhooks
 ├── Dashboard
 │
 ▼
-MARKETING 1.0
+CONVERSION
 │
 ├── Forms
 ├── CTA
@@ -822,87 +458,33 @@ MARKETING 1.0
 ├── Funnels
 │
 ▼
-MARKETING 1.1
-│
-├── Automation Engine
+AUTOMATION
 │
 ▼
-MARKETING 1.2
-│
-├── Email Campaigns
-├── Email Providers
+EMAIL
 │
 ▼
-MARKETING 1.3
-│
-├── A/B Testing
-├── Advanced Attribution
-├── Recommendations
+OPTIMIZATION
 │
 ▼
-MARKETING 1.4
-│
-├── AI Assistance
-├── Predictive Analysis
-├── Next Best Action
-│
-▼
-MARKETING 2.x / 2028–2030
+OPTIONAL AI
 ```
 
-## Immediate Development Starting Point
+## Immediate starting point when the project becomes active
 
-Development should **not** begin with newsletters, AI, dashboards, or a visual automation builder.
+Do not begin with newsletters, AI, dashboards or a visual workflow builder.
 
-The first implementation milestone should be limited to:
+Start with:
 
-```text
-1. Define database schema
-2. Define universal event format
-3. Define multisite isolation model
-4. Implement MARKETING_event()
-5. Implement anonymous visitor identity
-6. Implement profile association
-7. Implement consent checks
-8. Document the public plugin API
-```
+1. confirm the common Geeklog event contract;
+2. define the Marketing database schema;
+3. define multisite isolation;
+4. implement common event consumption;
+5. implement anonymous visitor identity;
+6. implement profile association;
+7. implement consent checks;
+8. document the Marketing API.
 
-Only after these foundations have been tested should Tags, Segments and Scoring be implemented.
+The strategic rule is simple:
 
-The long-term objective is for Geeklog plugins to share a common marketing vocabulary:
-
-```text
-Store ───────┐
-Booking ─────┤
-Services ────┤
-Documents ───┤
-Videos ──────┤
-Contact ─────┤
-Stories ─────┤
-Forum ───────┤
-             ▼
-       MARKETING EVENT API
-             │
-             ▼
-        First-Party Data
-             │
-             ▼
-   Segmentation & Intelligence
-             │
-             ▼
-        Automation
-```
-
-This common event and profile layer is the strategic component: it prevents Store, Booking, Services and future Geeklog plugins from each implementing their own incompatible marketing logic.
-
----
-
-## Memorandum Integration Note
-
-This level of detail should be preserved in **Memorandum**: it is precise enough to serve as a development specification when implementation begins, while deliberately avoiding premature decisions about table names or the final SQL schema.
-
-The next dedicated technical document should focus exclusively on:
-
-**Marketing 1.0 Data Model & Event API Specification**
-
-That specification should define the database model, universal event envelope, multisite isolation rules, consent-aware data lifecycle, public API contracts, extension points and compatibility requirements before implementation of higher-level marketing features begins.
+> Marketing consumes the shared Geeklog architecture; it does not replace it.
