@@ -1,6 +1,6 @@
 # Geeklog Development & Modernization Memorandum
 
-![Geeklog Memorandum](docs/images/geeklog-memorandum-banner.svg)
+![Geeklog Memorandum](docs/images/geeklog-cms-memorandum-2030.png)
 
 A practical reference for modernizing Geeklog plugins and themes today while preparing a cleaner architecture for the future.
 
