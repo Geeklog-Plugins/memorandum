@@ -1,19 +1,19 @@
 # Geeklog Development & Modernization Memorandum
 
-A practical reference for modernizing Geeklog plugins today while preparing a cleaner architecture for the future.
+A practical reference for modernizing Geeklog plugins and themes today while preparing a cleaner architecture for the future.
 
 ## Current compatibility priority
 
-For **plugins currently being modernized**, the working compatibility target is:
+For **plugins and the Eclipse theme currently being modernized**, the working compatibility target is:
 
 - **Geeklog 2.1.1 through 2.2.2**
 - **PHP 5.6 through PHP 8.1**
 
-This compatibility range is intentional. It allows existing Geeklog sites to upgrade plugins before or during a staged migration to Geeklog 2.2.2 and newer PHP versions.
+This compatibility range is intentional. It allows existing Geeklog sites to adopt modernized plugins and Eclipse before or during a staged migration to Geeklog 2.2.2 and newer PHP versions.
 
-New code should therefore avoid introducing syntax or runtime requirements that prevent PHP 5.6 compatibility unless a plugin explicitly changes its own support policy.
+New code should therefore avoid introducing syntax or runtime requirements that prevent PHP 5.6 compatibility unless a project explicitly changes its own support policy.
 
-The longer-term architecture described in this repository may target Geeklog 2.2.2 and PHP 8.1+ once the migration period is complete. Future targets must not be confused with the compatibility requirements of plugins being modernized today.
+The longer-term architecture described in this repository may target Geeklog 2.2.2 and PHP 8.1+ once the migration period is complete. Future targets must not be confused with the compatibility requirements of projects being modernized today.
 
 ---
 
@@ -28,16 +28,16 @@ These documents describe APIs and behavior that exist in Geeklog itself.
 - [`plugin-api-reference-2.2.2.md`](plugin-api-reference-2.2.2.md) — reference to the Geeklog 2.2.2 Plugin API.
 - [`plugin-configuration-migration-guide-2.2.2.md`](plugin-configuration-migration-guide-2.2.2.md) — configuration and upgrade lessons observed while modernizing plugins for Geeklog 2.2.2.
 
-These references describe the newer end of the supported range. When maintaining compatibility with Geeklog 2.1.1, plugins must verify that an API exists before relying on it or provide a compatible fallback.
+These references describe the newer end of the supported range. When maintaining compatibility with Geeklog 2.1.1, plugins and themes must verify that an API or theme capability exists before relying on it or provide a compatible fallback.
 
 ### 2. Development conventions
 
-These are recommended engineering rules for modernized plugins. They are not automatically official Geeklog requirements.
+These are recommended engineering rules for modernized plugins and themes. They are not automatically official Geeklog requirements.
 
 Core principles:
 
 - initialize variables explicitly;
-- keep code compatible with PHP 5.6 where current plugin policy requires it;
+- keep code compatible with PHP 5.6 where current project policy requires it;
 - remove PHP constructs that fail on PHP 8.x;
 - use Geeklog APIs instead of direct platform bypasses where practical;
 - validate input and escape output according to context;
@@ -45,7 +45,7 @@ Core principles:
 - preserve ACL checks on administration and sensitive actions;
 - separate PHP logic from templates where practical;
 - make installation and upgrades repeatable and non-destructive;
-- treat persistent plugin data differently from disposable cache data;
+- treat persistent project data differently from disposable cache data;
 - design storage and configuration with multisite isolation in mind.
 
 Additional conventions:
@@ -69,7 +69,7 @@ The present order is:
 
 The **Plugin Toolkit is on hold**.
 
-Eclipse is a theme project and can progressively target Geeklog 2.2.2 where required by the modern theme architecture. The broad Geeklog 2.1.1–2.2.2 / PHP 5.6–8.1 compatibility priority applies primarily to the plugins being modernized.
+Eclipse follows the same transition objective as the modernized plugins: native support for Geeklog 2.1.1 through 2.2.2 and PHP 5.6 through 8.1. This broader compatibility is intended to make Eclipse adoptable by existing sites before they complete a Geeklog or PHP migration.
 
 ### 4. Future architecture
 
@@ -90,7 +90,7 @@ The goal is not to build every future feature now. The goal is to avoid architec
 
 ## Write for PHP 5.6, test through PHP 8.1
 
-For plugins keeping the current compatibility policy:
+For projects keeping the current compatibility policy:
 
 - do not use scalar type declarations, return type declarations, null coalescing (`??`), arrow functions, typed properties, union types, attributes, constructor property promotion, `match`, or other syntax unavailable in PHP 5.6;
 - replace removed legacy constructs such as `each()` and curly-brace string/array offsets;
@@ -102,16 +102,18 @@ Compatibility is not achieved by writing old-style code. It is achieved by using
 
 ## Geeklog 2.1.1 through 2.2.2
 
-A modernized plugin should not assume every Geeklog 2.2.2 facility exists in 2.1.1.
+A modernized project should not assume every Geeklog 2.2.2 facility exists in 2.1.1.
 
-When a newer API materially improves integration:
+When a newer API or theme capability materially improves integration:
 
 1. use it when available;
 2. provide a safe fallback for older supported Geeklog versions;
 3. isolate compatibility code so it can later be removed cleanly;
 4. document when a feature behaves differently across versions.
 
-Avoid theme-specific assumptions in plugin business logic. Plugins should produce theme-compatible output through Geeklog conventions rather than depend on Denim, Eclipse, or another specific theme unless the integration is explicitly optional.
+Plugins should avoid theme-specific assumptions in business logic. They should produce theme-compatible output through Geeklog conventions rather than depend on Denim, Eclipse, or another specific theme unless the integration is explicitly optional.
+
+Eclipse itself should provide version-aware compatibility layers where Geeklog 2.2.2 introduces theme capabilities that do not exist in Geeklog 2.1.1.
 
 ## Rendering
 
@@ -124,6 +126,8 @@ Do not describe legacy rendering functions as universally removed unless that st
 Use Geeklog's script and CSS management APIs where they are available and compatible with the supported Geeklog range. Register assets before final document rendering.
 
 Avoid embedding unescaped PHP values directly into JavaScript. For structured PHP-to-JavaScript data, JSON encoding with appropriate escaping is preferred.
+
+Eclipse and plugins should account for differences in asset handling between Geeklog 2.1.1 and 2.2.2 instead of assuming only the newer path.
 
 ## Database access
 
@@ -145,6 +149,8 @@ Prefer `.thtml` templates for significant presentation markup. Keep business log
 
 Plugin output should remain theme-independent. Eclipse may serve as a modern reference implementation, but plugins should not require Eclipse unless explicitly documented.
 
+Eclipse should preserve native compatibility with both the legacy theme expectations of Geeklog 2.1.1 and the newer theme architecture of Geeklog 2.2.2 through explicit compatibility handling rather than separate incompatible editions where practical.
+
 ## Installation and upgrades
 
 Modernization must preserve existing installations.
@@ -161,15 +167,15 @@ Configuration defaults for new installations and configuration migration for exi
 
 ## Persistent storage
 
-User files and persistent plugin data must not be stored in locations that Geeklog treats as disposable cache.
+User files and persistent plugin or theme data must not be stored in locations that Geeklog treats as disposable cache.
 
-A plugin should derive persistent paths from the current site's configuration so that multisite installations remain isolated. See [`plugin-persistent-storage-guide.md`](plugin-persistent-storage-guide.md).
+A project should derive persistent paths from the current site's configuration so that multisite installations remain isolated. See [`plugin-persistent-storage-guide.md`](plugin-persistent-storage-guide.md).
 
 ## Multisite
 
 Multisite is a development constraint, not merely a future plugin feature.
 
-Every plugin storing persistent data should define:
+Every project storing persistent data should define:
 
 - current site context;
 - data isolation;
@@ -218,4 +224,4 @@ Services, Booking, Entity/Knowledge, Tools, Recommendations and AI/Agents are cu
 
 Geeklog already provides a mature publishing foundation. The next architectural opportunity is to make its information easier to structure, expose and connect while keeping plugins focused and independent.
 
-Near-term modernization comes first. Future architecture should guide today's interfaces without forcing unfinished abstractions into plugins that still need stabilization.
+Near-term modernization comes first. Future architecture should guide today's interfaces without forcing unfinished abstractions into projects that still need stabilization.
