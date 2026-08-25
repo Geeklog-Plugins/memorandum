@@ -1,5 +1,7 @@
 # Geeklog Development & Modernization Memorandum
 
+![Geeklog Memorandum](docs/images/geeklog-memorandum-banner.svg)
+
 A practical reference for modernizing Geeklog plugins and themes today while preparing a cleaner architecture for the future.
 
 ## Current compatibility priority
