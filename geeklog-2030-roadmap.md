@@ -1,48 +1,39 @@
 # Geeklog 2030 Roadmap
 
+## Status
+
+**Architectural direction — not the current implementation queue.**
+
+The immediate modernization priority remains the stabilization of active plugins across:
+
+- **Geeklog 2.1.1 through 2.2.2**
+- **PHP 5.6 through PHP 8.1**
+
+This roadmap describes dependency principles for future architecture. It should influence interfaces where useful, but it must not force unfinished abstractions into plugins that still need stabilization.
+
 ## Building the foundation for the next generation of Geeklog
 
 Geeklog does not need to predict exactly what the web will look like in 2030.
 
-It needs to make the right architectural choices today so that future capabilities can be added without repeatedly redesigning the platform.
+It needs to make architectural choices that leave room for future capabilities without repeatedly redesigning the platform.
 
-The central idea of this roadmap is simple:
+The central idea is:
 
 > **Structure → Expose → Connect → Discover → Recommend → Automate → Act**
 
-The priority is not artificial intelligence itself.  
-The priority is to make Geeklog content, products, services, availability and actions understandable and reusable by:
-
-- people;
-- search engines;
-- applications;
-- external services;
-- AI assistants;
-- future software agents.
-
-This document proposes a practical starting point.
+The priority is not artificial intelligence itself. The priority is to make Geeklog content, products, services, availability and actions understandable and reusable by people, search engines, applications, external services, AI assistants and future software agents.
 
 ---
 
 ## 1. Guiding principles
 
-Future Geeklog development should favor a few long-lived principles.
-
 ### Structured first
 
-Important information should be represented as data, not only as rendered HTML.
-
-A product should be identifiable as a product.
-
-A service should be identifiable as a service.
-
-An event, place, document, person or booking should follow the same principle.
+Important information should increasingly be represented as data, not only as rendered HTML.
 
 ### APIs before AI
 
-AI features should consume stable Geeklog APIs rather than access plugin internals directly.
-
-This keeps Geeklog independent from any particular AI provider.
+Future AI features should consume stable Geeklog interfaces rather than access plugin internals directly.
 
 ### Plugins remain focused
 
@@ -54,11 +45,11 @@ For example:
 - **Services** describes services and providers;
 - **Booking** handles resources, availability and reservations.
 
-They should integrate closely without becoming one monolithic plugin.
+These future components should integrate without becoming one monolithic plugin.
 
 ### Events connect the ecosystem
 
-Plugins should be able to announce important events without knowing who consumes them.
+A future common event mechanism should let plugins announce meaningful events without knowing who consumes them.
 
 Examples:
 
@@ -67,42 +58,40 @@ store.order.created
 store.payment.completed
 services.request.created
 booking.reservation.created
-document.downloaded
-content.viewed
+documents.file.downloaded
+content.article.viewed
 ```
 
-Marketing, analytics, notifications, recommendations and external integrations can then subscribe independently.
+Marketing, Analytics, Notifications, Recommendations and external integrations could then subscribe independently.
 
-### Multisite must be designed in from the beginning
+### Multisite is a current constraint
 
-Data isolation, API context, persistent storage and permissions must work correctly on both single-site and multisite installations.
+Multisite-safe design applies now, even though the dedicated Multisite Manager is a later project.
+
+Data isolation, persistent storage, configuration and permissions should already be site-aware in active plugins.
+
+See [`multisite-development-principles.md`](multisite-development-principles.md).
 
 ---
 
-# 2. Priority 0 — Define the common Data/API layer
+# 2. Future foundation — Common Data/API conventions
 
-This is the first architectural task.
-
-Before adding advanced discovery, marketing or AI features, Geeklog plugins need a common way to expose their data.
-
-## Goals
-
-Define conventions for:
+Before advanced discovery, marketing or AI features are developed, future Geeklog components should converge on common conventions for:
 
 - JSON responses;
-- object identifiers;
+- identifiers;
 - API versioning;
 - pagination;
 - filtering;
 - sorting;
 - permissions;
 - authentication;
-- error responses;
+- errors;
 - metadata;
 - multisite context;
-- plugin extensions.
+- extension points.
 
-Initial resources could eventually include:
+Possible future resources might include:
 
 ```text
 /api/content
@@ -114,33 +103,29 @@ Initial resources could eventually include:
 /api/places
 ```
 
-These endpoints are examples, not a frozen specification.
+These are examples, not an existing Geeklog specification.
 
-The first deliverable should be a small document:
+A future deliverable may be:
 
 **Geeklog Data API 1.0 — Draft Specification**
 
-The goal is to establish conventions before individual plugins invent incompatible APIs.
-
 ---
 
-# 3. Priority 0 — Define Geeklog Events
+# 3. Future foundation — Common Geeklog Events
 
-A lightweight common event mechanism should be defined alongside the Data API.
+A lightweight event contract should be designed alongside future Data/API conventions.
 
-Possible API concept:
+Possible concept:
 
 ```php
 GEEKLOG_event('store.order.created', $data);
 ```
 
-The exact implementation remains to be designed.
+The name and implementation are intentionally not frozen yet.
 
-The important part is the contract.
+The important architectural rule is that the event mechanism belongs to the shared Geeklog layer, not to Marketing or another consumer.
 
-## Event naming
-
-Use predictable names:
+Preferred naming convention:
 
 ```text
 domain.object.action
@@ -151,48 +136,36 @@ Examples:
 ```text
 content.article.viewed
 documents.file.downloaded
-
 store.product.viewed
 store.order.created
 store.payment.completed
-
 services.request.created
-
 booking.reservation.created
 booking.reservation.cancelled
 ```
 
-## Why events matter
-
-A shared event model would allow future plugins to cooperate without hard dependencies.
-
-For example:
+Conceptual flow:
 
 ```text
 Store
   ↓
 store.payment.completed
   ↓
-Marketing
-Analytics
-Notifications
-Recommendations
-Webhooks
+┌──────────────┬────────────┬────────────────┐
+Marketing   Analytics   Notifications   Webhooks
 ```
-
-One event can serve many consumers.
 
 ---
 
-# 4. Priority 1 — Develop Store on top of these contracts
+# 4. Store — active project, future interoperability
 
-The Store plugin is still under development.
+**Status: Active project.**
 
-That makes the present moment especially important: its public interfaces can still be designed with future interoperability in mind.
+Store is still under development and should first be stabilized across the current compatibility range.
 
-Store should remain focused on commerce.
+Its future public interfaces should remain extensible enough to cooperate with shared data and event contracts later, without delaying present stabilization.
 
-## Store responsibilities
+Store remains focused on commerce:
 
 - products;
 - variants;
@@ -205,67 +178,19 @@ Store should remain focused on commerce.
 - digital products;
 - order states.
 
-## Store should prepare for
-
-- products without stock;
-- free products;
-- digital products;
-- extensible metadata;
-- external payment providers;
-- API-created orders;
-- webhooks;
-- common Geeklog events;
-- future links to Services and Booking.
-
-## Store should not become responsible for
-
-- calendars;
-- service providers;
-- appointment availability;
-- booking resources;
-- time slots;
-- service-specific business logic.
-
-Those belong elsewhere.
+Store should not absorb calendars, service providers, appointment availability, booking resources, time slots or service-specific business logic.
 
 ---
 
-# 5. Priority 2 — Create the Services plugin
+# 5. Services
 
-Services should describe what a person, organization or site can provide.
+**Status: Architectural concept.**
 
-A service is not necessarily a traditional Store product.
+Services could describe what a person, organization or site provides.
 
-Examples:
+Examples include consulting, training, audits, repair, installation, accommodation, rental or online services.
 
-- consulting;
-- training;
-- audit;
-- repair;
-- installation;
-- accommodation;
-- rental;
-- professional intervention;
-- online service.
-
-## Initial service model
-
-A service may contain:
-
-- title;
-- description;
-- provider;
-- categories;
-- service area;
-- delivery method;
-- indicative duration;
-- location;
-- metadata;
-- whether it is bookable;
-- whether it is paid;
-- optional Store product reference.
-
-Services answers the question:
+Services answers:
 
 > **What can be provided?**
 
@@ -275,84 +200,31 @@ Store answers:
 
 ---
 
-# 6. Priority 3 — Create the Booking plugin
+# 6. Booking
 
-Booking should manage scarce resources over time.
+**Status: Architectural concept.**
 
-It should not merely be an appointment calendar.
-
-## Core concepts
-
-- resources;
-- providers;
-- calendars;
-- availability;
-- time slots;
-- duration;
-- capacity;
-- reservations;
-- cancellations;
-- status;
-- waiting lists.
-
-Possible resources could later include:
-
-```text
-PERSON
-ROOM
-VEHICLE
-EQUIPMENT
-SEAT
-ACCOMMODATION
-EVENT
-SERVICE
-```
+Booking could manage scarce resources over time: providers, rooms, equipment, availability, time slots, capacity, reservations and cancellations.
 
 Booking answers:
 
 > **When is it available?**
 
-This creates a clean relationship:
+Future relationship:
 
 ```text
-Services
-   ↓
-what is offered
-
-Booking
-   ↓
-when it is available
-
-Store
-   ↓
-how it is purchased
-```
-
-Not every service requires all three plugins.
-
-Examples:
-
-```text
-Free consultation
-Services + Booking
-
-Digital ebook
-Store
-
-Paid training session
-Services + Booking + Store
-
-Audit delivered within five days
-Services + Store
+Services → what is offered
+Booking  → when it is available
+Store    → how it is purchased
 ```
 
 ---
 
-# 7. Priority 4 — Introduce an Entity / Knowledge layer
+# 7. Entity / Knowledge layer
 
-Once plugins expose structured data, Geeklog can begin connecting it.
+**Status: Architectural concept.**
 
-A future Entity or Knowledge layer could describe common concepts such as:
+A future interoperability layer could connect concepts such as:
 
 ```text
 PERSON
@@ -365,218 +237,74 @@ DOCUMENT
 TOPIC
 ```
 
-and relationships such as:
+This should complement existing Geeklog data rather than require replacement of existing tables.
 
-```text
-PERSON → provides → SERVICE
-PERSON → writes → ARTICLE
-SERVICE → available_at → PLACE
-SERVICE → bookable_with → BOOKING
-PRODUCT → purchasable_with → STORE
-ARTICLE → explains → TOPIC
-```
-
-This does not require replacing existing Geeklog tables.
-
-It can be an additional interoperability layer.
-
-Its purpose is to transform isolated plugin data into connected knowledge.
+A future Marketing profile must remain a Marketing projection, not the canonical identity for this layer.
 
 ---
 
-# 8. Priority 5 — Build cross-plugin Search and Discovery
+# 8. Cross-plugin Search and Discovery
 
-Search should eventually work across:
+**Status: Architectural concept.**
 
-- articles;
-- static pages;
-- documents;
-- videos;
-- forums;
-- products;
-- services;
-- events;
-- places.
+Future search could work across articles, static pages, documents, videos, forums, products, services, events and places.
 
-## Search 1.0
+A first stage should rely on good information architecture, metadata, filters and relationships before optional semantic or AI capabilities are considered.
 
-Start without requiring AI:
-
-- full-text search;
-- content types;
-- filters;
-- facets;
-- topics;
-- metadata;
-- entity relationships.
-
-## Search 2.0
-
-Add optional semantic capabilities later:
-
-- embeddings;
-- semantic search;
-- intent detection;
-- conversational queries;
-- source-backed answers;
-- retrieval-augmented generation.
-
-The principle should remain:
-
-> AI improves a good information architecture; it should not be used to hide a poor one.
+> AI should improve a good information architecture, not hide a poor one.
 
 ---
 
-# 9. Priority 6 — Build a Tools framework
+# 9. Tools framework
 
-Some users do not need another article.
+**Status: Architectural concept.**
 
-They need to solve something.
-
-A future Tools plugin could provide a reusable framework for:
-
-- calculators;
-- simulators;
-- diagnostics;
-- questionnaires;
-- configurators;
-- comparison tools.
-
-Example:
-
-```text
-ARTICLE
-   ↓
-explains the problem
-
-TOOL
-   ↓
-helps solve the problem
-```
-
-Tools should also expose structured inputs and results so that they can later be used by Search, Recommendations and AI assistants.
+A future Tools framework could support calculators, simulators, diagnostics, questionnaires, configurators and comparison tools.
 
 ---
 
-# 10. Priority 7 — Add Recommendations
+# 10. Recommendations
 
-Recommendations should be a cross-plugin service rather than a feature implemented separately by every plugin.
+**Status: Architectural concept.**
 
-A first version does not require AI.
+Recommendations should eventually be a cross-plugin capability rather than a separate implementation inside every plugin.
 
-It can use:
-
-- topics;
-- tags;
-- entity relationships;
-- popularity;
-- content type;
-- user history when permitted.
-
-A visitor reading an article could then be guided toward:
-
-```text
-Article
-Document
-Video
-Tool
-Forum discussion
-Service
-Product
-Event
-```
-
-The goal is to move from simple related content to useful discovery.
+A first version need not require AI.
 
 ---
 
-# 11. Priority 8 — Build Marketing on the shared foundation
+# 11. Marketing
 
-Marketing should come after the event and data layers are established.
+**Status: Architectural concept / future project.**
 
-It can then consume activity from the whole Geeklog ecosystem.
+Marketing should consume shared Geeklog data and events rather than create a second universal event architecture.
 
-Possible future capabilities include:
+Potential capabilities include consent, visitor profiles, tags, segments, scoring, attribution, UTM tracking, journeys and integrations.
 
-- consent management;
-- visitor profiles;
-- tags;
-- dynamic segments;
-- lead scoring;
-- campaign attribution;
-- UTM tracking;
-- automated journeys;
-- personalized recommendations;
-- email integrations.
-
-Example:
-
-```text
-content.viewed
-document.downloaded
-service.viewed
-booking.reservation.created
-store.order.completed
-          ↓
-      Marketing
-          ↓
-profile → interest → segment → action
-```
-
-Marketing should consume common data and events rather than create a second tracking architecture.
+See [`geeklog-marketing-roadmap-2027-2030.md`](geeklog-marketing-roadmap-2027-2030.md).
 
 ---
 
-# 12. Priority 9 — Add AI assistants and agents
+# 12. AI assistants and agents
 
-Advanced AI should be built only after Geeklog can clearly expose both information and actions.
+**Status: Long-term architectural concept.**
 
-An AI assistant could then:
+Advanced AI should be considered only after Geeklog can expose information and authorized actions through clear interfaces.
 
-- search;
-- explain;
-- compare;
-- recommend;
-- find a service;
-- check availability.
+AI providers should remain replaceable adapters.
 
-Future authorized agents could potentially:
-
-- request a quote;
-- create a booking;
-- prepare an order;
-- initiate other controlled actions.
-
-Read operations and action operations should remain clearly separated.
-
-For example:
-
-```text
-READ
-search
-compare
-availability
-
-ACTION
-contact
-booking
-order
-```
-
-Actions must use strict authentication, permissions, validation and audit trails.
-
-AI providers should remain replaceable adapters rather than become dependencies of the core architecture.
+Read operations and action operations must remain clearly separated, with strict authentication, permissions, validation and audit trails for actions.
 
 ---
 
-# 13. Recommended implementation sequence
+# 13. Dependency sequence
 
 ```text
-1. DATA / API
+1. DATA / API CONVENTIONS
        ↓
-2. EVENTS
+2. COMMON EVENTS
        ↓
-3. STORE
+3. STORE INTEROPERABILITY
        ↓
 4. SERVICES
        ↓
@@ -595,64 +323,23 @@ AI providers should remain replaceable adapters rather than become dependencies 
 11. AI / AGENTS
 ```
 
-This is a dependency order, not a multi-year calendar.
+This is a **dependency order**, not a multi-year calendar and not the current task list.
 
-Several stages can overlap once their interfaces are stable.
-
----
-
-# 14. Immediate starting point
-
-The roadmap can begin with three concrete tasks.
-
-## Task 1 — Draft the Geeklog Data API 1.0 specification
-
-Define:
-
-- resource structure;
-- identifiers;
-- JSON conventions;
-- errors;
-- pagination;
-- filtering;
-- permissions;
-- versioning;
-- multisite behavior.
-
-**Deliverable:** a reviewable Markdown specification.
+The operational task list remains in [`geeklog-modernization-roadmap.md`](geeklog-modernization-roadmap.md).
 
 ---
 
-## Task 2 — Draft Geeklog Events 1.0
+# 14. When future architecture work should start
 
-Define:
+Architecture work becomes useful when an active project reaches a point where a public interface is about to become difficult to change.
 
-- event naming;
-- payload conventions;
-- dispatch mechanism;
-- listener mechanism;
-- error isolation;
-- synchronous vs future asynchronous considerations.
+At that moment, the smallest useful deliverables are:
 
-**Deliverable:** a small event specification and reference implementation proposal.
+1. a draft shared data/API convention;
+2. a draft common event contract;
+3. a review of Store or another active plugin against those contracts.
 
----
-
-## Task 3 — Review Store against the future contracts
-
-Before the Store plugin architecture becomes stable, verify that it can support:
-
-- the Data API;
-- common events;
-- extensible metadata;
-- clean external integrations;
-- future Services links;
-- future Booking links;
-- multisite isolation.
-
-The goal is not to add Services or Booking logic to Store.
-
-The goal is to ensure Store can cooperate with them later.
+Do not block stabilization work merely to implement speculative infrastructure.
 
 ---
 
@@ -660,37 +347,17 @@ The goal is to ensure Store can cooperate with them later.
 
 The first milestone is not an AI chatbot.
 
-It is much simpler.
+It is a Geeklog ecosystem where plugins can expose predictable information, remain multisite-safe and cooperate without direct knowledge of each other's internals.
 
-A Geeklog installation should be able to describe its important information through predictable interfaces.
-
-A plugin should be able to announce important events.
-
-Another plugin should be able to consume those events without modifying the original plugin.
-
-Store, Services and Booking should remain independent but interoperable.
-
-Once these foundations exist, future development becomes significantly easier.
-
-Search can discover more.
-
-Recommendations can connect more.
-
-Marketing can understand more.
-
-AI can answer better.
-
-Agents can eventually act safely.
+Once those foundations exist, Search, Recommendations, Marketing and AI can be added with much less coupling.
 
 ---
 
-# 16. The long-term direction
+# 16. Long-term direction
 
 Geeklog already knows how to publish.
 
-The next step is to help it understand, expose and connect what it publishes.
-
-The long-term direction can therefore remain deliberately simple:
+The next step is to make what it publishes easier to structure, expose and connect.
 
 > **Structure → Expose → Connect → Discover → Recommend → Automate → Act**
 

@@ -1,20 +1,38 @@
 # Geeklog Modernization Roadmap
 
-This roadmap focuses on the current priorities for the Geeklog ecosystem and keeps the scope intentionally simple.
+This roadmap focuses on the current implementation priorities for the Geeklog ecosystem.
+
+## Current compatibility target
+
+For plugins and the Eclipse theme currently being modernized, the priority is to preserve compatibility across:
+
+- **Geeklog 2.1.1 through 2.2.2**
+- **PHP 5.6 through PHP 8.1**
+
+This allows plugins and Eclipse to be adopted before or during a staged Geeklog/PHP migration.
+
+Modernization should therefore use the safe common subset of PHP 5.6–8.1 and isolate Geeklog-version compatibility code where newer APIs or theme capabilities are not available in Geeklog 2.1.1.
+
+---
 
 ## 1. Menu 1.3.0
 
-**Goal:** make Menu a reliable navigation layer for modern Geeklog themes.
+**Status:** Active
+
+**Goal:** make Menu a reliable navigation layer for Geeklog themes while preserving the current compatibility range.
 
 ### Priorities
 - Finalize configuration defaults for new installations and upgrades.
 - Complete the admin menu preview.
-- Fix remaining compatibility issues.
-- Improve the integration with Eclipse.
-- Define a clean and reusable navigation output for themes.
-- Keep compatibility with existing Geeklog installations where practical.
+- Fix remaining Geeklog 2.1.1–2.2.2 compatibility issues.
+- Keep PHP 5.6–8.1 compatibility.
+- Improve the optional integration with Eclipse.
+- Define clean and reusable navigation output for themes.
+- Avoid making the plugin dependent on one specific theme.
 
 ## 2. Documents
+
+**Status:** Active
 
 **Goal:** stabilize the plugin before adding new features.
 
@@ -25,35 +43,53 @@ This roadmap focuses on the current priorities for the Geeklog ecosystem and kee
 - Ensure safe and isolated storage for multisite installations.
 - Confirm that upgrades are non-destructive and repeatable.
 - Keep packaging and migration tests reliable.
+- Validate behavior on Geeklog 2.1.1 and 2.2.2.
+- Validate PHP 5.6 and PHP 8.1 compatibility.
 
 ## 3. Maps
 
-**Goal:** restore a stable base before continuing modernization.
+**Status:** Active
+
+**Goal:** restore a stable historical base before continuing modernization.
 
 ### Priorities
 - Finish synchronization with the target 1.5.6 alpha18 archive.
 - Align `functions.inc` with the expected version.
 - Synchronize the remaining language and admin files.
-- Validate the plugin before starting new development.
+- Validate the synchronized plugin before new development.
 - Modernize Google Maps integration for current APIs.
-- Improve PHP 8 compatibility, security, and search behavior.
+- Improve security and search behavior.
+- Preserve Geeklog 2.1.1–2.2.2 compatibility where practical.
+- Preserve PHP 5.6–8.1 compatibility.
 
 ## 4. Eclipse Theme
 
-**Goal:** make Eclipse the reference modern theme for Geeklog 2.2.2.
+**Status:** Active
+
+**Goal:** make Eclipse a modern reference theme that can be adopted across Geeklog 2.1.1–2.2.2 installations.
 
 ### Priorities
+- Provide native support for Geeklog 2.1.1 through 2.2.2.
+- Preserve PHP 5.6 through PHP 8.1 compatibility.
+- Use version-aware compatibility layers where Geeklog 2.2.2 introduces theme APIs or rendering behavior not present in Geeklog 2.1.1.
+- Avoid splitting Eclipse into incompatible legacy and modern editions where a clean compatibility layer can solve the difference.
 - Stabilize the integration with Menu.
 - Make navigation robust when Geeklog caches are rebuilt or cleared.
 - Finalize the main frontend and admin layouts.
 - Complete Theme Studio features.
 - Keep theme data outside temporary Geeklog cache storage.
 - Improve SEO, accessibility, and mobile behavior.
-- Target Geeklog 2.2.2 as the main supported platform.
+- Test installation, activation, rendering and administration on both ends of the supported Geeklog and PHP ranges.
+
+The compatibility objective is strategic: an administrator should be able to adopt Eclipse on an existing Geeklog 2.1.1 / PHP 5.6 installation and retain it while migrating the site toward Geeklog 2.2.2 / PHP 8.1.
+
+Eclipse should remain a reference implementation rather than a mandatory dependency for plugins.
 
 ## 5. Store Plugin
 
-**Goal:** stabilize Store as a modern application and distribution component for Geeklog.
+**Status:** Active
+
+**Goal:** stabilize Store as a modern commerce component for Geeklog without prematurely expanding its scope.
 
 ### Priorities
 - Complete the current functional base.
@@ -61,22 +97,29 @@ This roadmap focuses on the current priorities for the Geeklog ecosystem and kee
 - Improve installation and upgrade reliability.
 - Validate the product management workflow.
 - Continue testing with realistic demo products.
-- Document the architecture before expanding the feature set.
+- Preserve Geeklog 2.1.1–2.2.2 compatibility while the migration policy remains active.
+- Preserve PHP 5.6–8.1 compatibility.
+- Keep interfaces extensible enough for future interoperability without implementing unfinished future architecture now.
 - Avoid making other major projects depend on Store until it is stable.
 
 ## 6. Videos
 
-**Goal:** modernize data handling and prepare the plugin for current Geeklog installations.
+**Status:** Active
+
+**Goal:** modernize data handling and stabilize the plugin for current Geeklog installations.
 
 ### Priorities
 - Move persistent plugin data outside disposable cache locations.
 - Use a site-specific storage path compatible with multisite.
 - Validate migration from existing installations.
-- Improve PHP 8 compatibility.
 - Review security and file handling.
+- Preserve Geeklog 2.1.1–2.2.2 compatibility.
+- Preserve PHP 5.6–8.1 compatibility.
 - Complete functional tests before adding new features.
 
 ## 7. Multisite Manager
+
+**Status:** Planned
 
 **Goal:** reduce manual configuration and make Geeklog multisite easier to operate.
 
@@ -89,18 +132,26 @@ This roadmap focuses on the current priorities for the Geeklog ecosystem and kee
 - Reduce direct manual edits to `db-config.php` and `siteconfig.php`.
 - Keep the solution compatible with normal single-site installations where possible.
 
+The Multisite Manager itself can remain a later project. Multisite-safe development principles apply immediately to active plugins and themes.
+
+See [`multisite-development-principles.md`](multisite-development-principles.md).
+
 ## 8. Geeklog 2030
 
-**Goal:** prepare Geeklog for long-term evolution without trying to copy other CMS platforms.
+**Status:** Architectural direction
+
+**Goal:** prepare Geeklog for long-term evolution without confusing future architecture with current implementation priorities.
 
 ### Priorities
-- Define common plugin architecture conventions.
-- Improve APIs and structured data access.
+- Define common interoperability conventions.
+- Improve structured data access over time.
 - Strengthen multisite support.
 - Improve plugin interoperability.
 - Prepare future integrations with automation and AI tools.
 - Modernize documentation and developer workflows.
-- Encourage new services and plugins built on a stable Geeklog core.
+- Encourage new services and plugins built on a stable Geeklog base.
+
+The 2030 roadmap is a dependency and architecture guide, not the current development queue.
 
 ---
 
@@ -115,10 +166,21 @@ This roadmap focuses on the current priorities for the Geeklog ecosystem and kee
 7. Multisite Manager
 8. Geeklog 2030 initiatives
 
-The immediate objective is to finish and stabilize the existing modernization work before opening too many new development fronts.
+The immediate objective is to finish and stabilize existing modernization work before opening too many new development fronts.
+
+## Cross-project rules
+
+All active plugins and Eclipse should progressively follow:
+
+- [`plugin-persistent-storage-guide.md`](plugin-persistent-storage-guide.md)
+- [`multisite-development-principles.md`](multisite-development-principles.md)
+- [`plugin-configuration-migration-guide-2.2.2.md`](plugin-configuration-migration-guide-2.2.2.md) where Geeklog 2.2.2 configuration behavior is relevant
+- [`plugin-api-reference-2.2.2.md`](plugin-api-reference-2.2.2.md) while checking for fallbacks required by Geeklog 2.1.1
 
 ## Projects on Hold
 
 ### Plugin Toolkit
 
-The Plugin Toolkit modernization is currently considered non-priority and may be put on hold. Work should only resume if it becomes necessary for the other active projects.
+**Status:** On hold
+
+The Plugin Toolkit modernization is not a current priority. Work should resume only if it becomes necessary for active modernization projects or if its strategic value is reassessed later.
