@@ -4,16 +4,14 @@ This roadmap focuses on the current implementation priorities for the Geeklog ec
 
 ## Current compatibility target
 
-For plugins currently being modernized, the priority is to preserve compatibility across:
+For plugins and the Eclipse theme currently being modernized, the priority is to preserve compatibility across:
 
 - **Geeklog 2.1.1 through 2.2.2**
 - **PHP 5.6 through PHP 8.1**
 
-This allows plugins to be upgraded before or during a staged Geeklog/PHP migration.
+This allows plugins and Eclipse to be adopted before or during a staged Geeklog/PHP migration.
 
-Modernization should therefore use the safe common subset of PHP 5.6–8.1 and isolate Geeklog-version compatibility code where newer APIs are not available in Geeklog 2.1.1.
-
-The Eclipse theme is a separate case: its modern branch may target Geeklog 2.2.2 where required by the newer theme architecture.
+Modernization should therefore use the safe common subset of PHP 5.6–8.1 and isolate Geeklog-version compatibility code where newer APIs or theme capabilities are not available in Geeklog 2.1.1.
 
 ---
 
@@ -21,7 +19,7 @@ The Eclipse theme is a separate case: its modern branch may target Geeklog 2.2.2
 
 **Status:** Active
 
-**Goal:** make Menu a reliable navigation layer for Geeklog themes while preserving the current plugin compatibility range.
+**Goal:** make Menu a reliable navigation layer for Geeklog themes while preserving the current compatibility range.
 
 ### Priorities
 - Finalize configuration defaults for new installations and upgrades.
@@ -68,16 +66,22 @@ The Eclipse theme is a separate case: its modern branch may target Geeklog 2.2.2
 
 **Status:** Active
 
-**Goal:** make Eclipse the reference modern theme for Geeklog 2.2.2.
+**Goal:** make Eclipse a modern reference theme that can be adopted across Geeklog 2.1.1–2.2.2 installations.
 
 ### Priorities
+- Provide native support for Geeklog 2.1.1 through 2.2.2.
+- Preserve PHP 5.6 through PHP 8.1 compatibility.
+- Use version-aware compatibility layers where Geeklog 2.2.2 introduces theme APIs or rendering behavior not present in Geeklog 2.1.1.
+- Avoid splitting Eclipse into incompatible legacy and modern editions where a clean compatibility layer can solve the difference.
 - Stabilize the integration with Menu.
 - Make navigation robust when Geeklog caches are rebuilt or cleared.
 - Finalize the main frontend and admin layouts.
 - Complete Theme Studio features.
 - Keep theme data outside temporary Geeklog cache storage.
 - Improve SEO, accessibility, and mobile behavior.
-- Use Geeklog 2.2.2 as the primary platform for the modern Eclipse branch.
+- Test installation, activation, rendering and administration on both ends of the supported Geeklog and PHP ranges.
+
+The compatibility objective is strategic: an administrator should be able to adopt Eclipse on an existing Geeklog 2.1.1 / PHP 5.6 installation and retain it while migrating the site toward Geeklog 2.2.2 / PHP 8.1.
 
 Eclipse should remain a reference implementation rather than a mandatory dependency for plugins.
 
@@ -128,7 +132,7 @@ Eclipse should remain a reference implementation rather than a mandatory depende
 - Reduce direct manual edits to `db-config.php` and `siteconfig.php`.
 - Keep the solution compatible with normal single-site installations where possible.
 
-The Multisite Manager itself can remain a later project. Multisite-safe development principles apply immediately to active plugins.
+The Multisite Manager itself can remain a later project. Multisite-safe development principles apply immediately to active plugins and themes.
 
 See [`multisite-development-principles.md`](multisite-development-principles.md).
 
@@ -166,7 +170,7 @@ The immediate objective is to finish and stabilize existing modernization work b
 
 ## Cross-project rules
 
-All active plugins should progressively follow:
+All active plugins and Eclipse should progressively follow:
 
 - [`plugin-persistent-storage-guide.md`](plugin-persistent-storage-guide.md)
 - [`multisite-development-principles.md`](multisite-development-principles.md)
