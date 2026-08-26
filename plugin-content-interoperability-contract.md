@@ -12,6 +12,8 @@ This contract is intended to support several consumers over time:
 - **Hub** — identify content, maintain relations, build content hubs, and react to lifecycle changes;
 - **IndexNow** — resolve URLs that should be submitted after changes;
 - **Sitemap** — discover addressable content;
+- **Content Syndication** — expose plugin content through Geeklog-managed RSS/Atom feeds;
+- **Statistics** — let plugins contribute to Geeklog's global statistics views;
 - **Search and recommendation features** — reuse structured metadata instead of plugin-specific SQL.
 
 The recommended approach is to build on existing Geeklog Plugin APIs rather than create a separate integration API for every consumer.
@@ -208,6 +210,8 @@ Relations, URLs, indexes or dependent pages can be refreshed
 
 This separates **change detection** from **content retrieval**.
 
+Lifecycle events are also useful to consumers such as XMLSitemap, which can react to saves and deletions for content types it tracks.
+
 ---
 
 # 4. Preserve `sub_type` when available
@@ -305,9 +309,11 @@ What's New can reuse the same underlying plugin query logic while remaining resp
 
 ---
 
-# 7. Optional future capabilities
+# 7. Optional and distribution capabilities
 
 Once the core interoperability layer is stable, plugins may add additional capabilities according to their role.
+
+These capabilities should be detected and documented independently from the basic Hub/content readiness score. A plugin does not need every capability to be interoperable.
 
 ## Related items
 
@@ -346,6 +352,98 @@ plugin_getBlocks_PLUGIN()
 
 Useful where the plugin provides reusable dynamic blocks.
 
+## Statistics
+
+Plugins may contribute to Geeklog's native statistics system and `/stats.php` through:
+
+```php
+plugin_showstats_PLUGIN()
+plugin_statssummary_PLUGIN()
+```
+
+These callbacks represent a native aggregation contract: the plugin remains responsible for calculating and formatting its statistics while Geeklog provides the common statistics surface.
+
+A useful capability classification is:
+
+```text
+Full     = both callbacks are implemented
+Partial  = one callback is implemented
+None     = neither callback is implemented
+```
+
+Statistics support is **not required for basic content interoperability** and should not be part of the core Hub readiness score. It is nevertheless valuable for dashboards, administration, reporting, and future Hub aggregation features.
+
+Consumers should prefer these native callbacks over direct reads of another plugin's tables when the goal is to obtain the plugin's own statistical presentation or summary.
+
+## Content Syndication
+
+Plugins that should be available through Geeklog's **Content Syndication** administration (`/admin/syndication.php`) can expose native feed support through:
+
+```php
+plugin_getfeednames_PLUGIN()
+plugin_getfeedcontent_PLUGIN()
+```
+
+`plugin_getfeednames_PLUGIN()` exposes the feed choices a plugin makes available, while `plugin_getfeedcontent_PLUGIN()` supplies the feed entries and metadata used by Geeklog to generate RSS/Atom output.
+
+A plugin may additionally implement:
+
+```php
+plugin_feedupdatecheck_PLUGIN()
+```
+
+This callback lets Geeklog determine efficiently whether an existing feed needs to be regenerated after content changes.
+
+Recommended capability classification:
+
+```text
+Full     = getFeedNames + getFeedContent
+Partial  = only one of the two primary callbacks
+None     = neither primary callback
+```
+
+`plugin_feedupdatecheck_*()` is an optional optimization and should be reported separately rather than required for Full syndication support.
+
+Content Syndication is a distribution capability, not a replacement for `plugin_getiteminfo_*()`. Feed rendering and structured inter-plugin metadata serve different consumers and should remain separate.
+
+## XML Sitemap contribution
+
+Geeklog's XMLSitemap integration has a specific collection contract that should be recognized explicitly.
+
+Since Geeklog 2.1.1, sitemap collection can use:
+
+```php
+plugin_collectSitemapItems_PLUGIN($uid, $limit)
+```
+
+through the core dispatcher:
+
+```php
+PLG_collectSitemapItems($type, $uid, $limit)
+```
+
+A plugin implementing `plugin_collectSitemapItems_*()` provides the **native sitemap collector** for its content type.
+
+If the plugin does not provide that callback, the XMLSitemap plugin can fall back to collection through:
+
+```php
+PLG_getItemInfo($type, '*', $what, $uid, $options)
+```
+
+Therefore sitemap interoperability should distinguish at least:
+
+```text
+Native collector      = plugin_collectSitemapItems_PLUGIN() exists
+Item Info fallback    = collection can be obtained through plugin_getiteminfo_PLUGIN('*', ...)
+None detected         = neither path is available
+```
+
+This distinction matters because implementing `plugin_getiteminfo_*()` with collection support already makes a content plugin useful to XMLSitemap even when it does not implement the specialized sitemap collector.
+
+The specialized collector remains preferable when sitemap-specific behavior, permissions, filtering, priorities, or performance considerations justify it.
+
+Lifecycle notifications complement this collection contract: XMLSitemap may listen to `PLG_itemSaved()` and `PLG_itemDeleted()` to know when tracked content changes, while the collector or Item Info interface remains responsible for supplying the addressable content itself.
+
 ## Services
 
 Geeklog services should be added when another plugin genuinely needs a specialized action, transaction, or rendering capability that is not covered by content metadata.
@@ -359,16 +457,20 @@ Services should not be introduced merely to duplicate `plugin_getiteminfo_*()`.
 | Priority | Capability | Purpose |
 | --- | --- | --- |
 | **P1** | `plugin_getiteminfo_PLUGIN()` | Expose structured content metadata |
-| **P1** | `'*'` collection support | Expose multiple content items |
+| **P1** | `'*'` collection support | Expose multiple content items and provide the XMLSitemap fallback path |
 | **P1** | `since`, `limit`, `order` options | Retrieve recent or changed content |
 | **P1** | `PLG_itemSaved()` | Signal create/update lifecycle changes |
 | **P1** | `PLG_itemDeleted()` | Signal deletions |
 | **P2** | `plugin_idtourl_PLUGIN()` | Resolve canonical item URLs where supported |
+| **P2** | `plugin_collectSitemapItems_PLUGIN()` | Provide optimized/native XML Sitemap collection where useful |
+| **P2/P3** | `plugin_getfeednames_PLUGIN()` + `plugin_getfeedcontent_PLUGIN()` | Participate in Content Syndication when the content type is feed-worthy |
+| **P3** | `plugin_feedupdatecheck_PLUGIN()` | Optimize feed regeneration |
+| **P3** | `plugin_showstats_PLUGIN()` + `plugin_statssummary_PLUGIN()` | Contribute to native Geeklog statistics where meaningful |
 | **P3** | `plugin_whatsnewsupported_PLUGIN()` | Participate in Geeklog What's New |
 | **P3** | `plugin_getwhatsnew_PLUGIN()` | Render recent items in What's New |
 | Future | `plugin_getrelateditems_PLUGIN()` | Support Hub relations and recommendations |
 
-For the next modernization work on **Maps, Documents, Videos, Store**, and similar content plugins, the P1 capabilities should be treated as the common interoperability baseline.
+For the next modernization work on **Maps, Documents, Videos, Store**, and similar content plugins, the P1 capabilities should be treated as the common interoperability baseline. P2/P3 distribution capabilities should be added when they fit the plugin's role and user value rather than mechanically implemented everywhere.
 
 ---
 
@@ -421,7 +523,30 @@ and, where supported:
 function plugin_idtourl_maps($sub_type, $item_id)
 ```
 
-The same pattern can then be applied to Documents, Videos, Store, and other addressable content plugins.
+If Maps should participate directly in XMLSitemap with sitemap-specific collection logic, it may also implement:
+
+```php
+function plugin_collectSitemapItems_maps($uid, $limit)
+```
+
+Otherwise, a complete `plugin_getiteminfo_maps('*', ...)` implementation provides the supported XMLSitemap fallback path.
+
+If Maps content is useful as an RSS/Atom source, it may additionally expose:
+
+```php
+plugin_getfeednames_maps()
+plugin_getfeedcontent_maps()
+plugin_feedupdatecheck_maps() // optional optimization
+```
+
+If Maps has meaningful site-level statistics, it may contribute them through:
+
+```php
+plugin_showstats_maps()
+plugin_statssummary_maps()
+```
+
+The same pattern can then be applied to Documents, Videos, Store, and other addressable content plugins, while only implementing optional distribution/presentation capabilities that make sense for each plugin.
 
 ---
 
@@ -447,11 +572,22 @@ Hub should:
 - listen to lifecycle events rather than poll plugin tables where practical;
 - retrieve metadata through Item Info after an event;
 - resolve URLs through `plugin_idtourl_*()` when available, with an Item Info fallback;
+- audit native Statistics, Content Syndication, and XML Sitemap capabilities separately from basic content readiness;
 - avoid becoming the owner of another plugin's content.
+
+## Content Syndication
+
+Geeklog's syndication layer should remain the owner of feed generation. Plugins should expose feed choices/content through the native callbacks rather than external consumers duplicating plugin-specific feed SQL.
+
+## XMLSitemap
+
+XMLSitemap should prefer `PLG_collectSitemapItems()` / `plugin_collectSitemapItems_*()` where available and use the supported `PLG_getItemInfo($type, '*', ...)` fallback otherwise.
+
+A plugin should not need XMLSitemap-specific SQL adapters merely to become discoverable if it already exposes a complete collection-capable Item Info contract.
 
 ## Other consumers
 
-IndexNow, Sitemap, Search, AI/agent layers, and future integrations should reuse the same normalized metadata wherever practical rather than invent plugin-specific adapters.
+IndexNow, Search, AI/agent layers, dashboards, and future integrations should reuse the same normalized metadata and native Geeklog callback surfaces wherever practical rather than invent plugin-specific adapters.
 
 ---
 
@@ -471,20 +607,22 @@ Other plugins should not need to know:
 They should interact through a small, stable Geeklog interoperability surface:
 
 ```text
-                Content plugin
-                     │
-        ┌────────────┼────────────┐
-        │            │            │
- getItemInfo     itemSaved    itemDeleted
-        │            │            │
-        ↓            └──────┬─────┘
- structured data            ↓
-        │                   Hub
-   ┌────┴────┐
-   ↓         ↓
- Hello      Hub
+                         Content plugin
+                              │
+        ┌─────────────────────┼──────────────────────┐
+        │                     │                      │
+ getItemInfo              lifecycle            distribution
+        │              saved / deleted                │
+        │                     │            ┌──────────┼──────────┐
+        │                     │            │          │          │
+        ↓                     ↓          feeds     sitemap     stats
+ structured data             Hub       syndication  collector  callbacks
+        │
+   ┌────┼───────────────┐
+   ↓    ↓               ↓
+ Hello  Hub          IndexNow / other consumers
 ```
 
 The long-term objective is not to create a Hub-specific or Hello-specific API.
 
-It is to make Geeklog plugins **interoperable by design**, so multiple consumers can reuse the same content contract without coupling themselves to plugin internals.
+It is to make Geeklog plugins **interoperable by design**, so multiple consumers can reuse the same content contract and Geeklog's existing distribution surfaces without coupling themselves to plugin internals.
