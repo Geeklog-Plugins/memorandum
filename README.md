@@ -77,8 +77,11 @@ Eclipse follows the same transition objective as the modernized plugins: native 
 
 These documents describe direction and proposed contracts. They are not claims about APIs already present in Geeklog.
 
+- [`plugin-content-interoperability-contract.md`](plugin-content-interoperability-contract.md) — recommended common contract for exposing plugin content to Hello, Hub, IndexNow, Sitemap, search, recommendations and future consumers while keeping plugins independent from each other's SQL and internals.
 - [`geeklog-2030-roadmap.md`](geeklog-2030-roadmap.md)
 - [`geeklog-marketing-roadmap-2027-2030.md`](geeklog-marketing-roadmap-2027-2030.md)
+
+For modernized content plugins such as **Maps, Documents, Videos and Store**, the interoperability baseline should now be considered during implementation, not postponed until Hub is complete. The recommended baseline is structured Item Info exposure, collection retrieval where appropriate, lifecycle event emission, and URL resolution with compatibility fallbacks across Geeklog 2.1.1–2.2.2.
 
 The long-term principle is:
 
@@ -187,15 +190,36 @@ Every project storing persistent data should define:
 
 The future **Multisite Manager** can remain a later implementation project while these principles apply immediately. See [`multisite-development-principles.md`](multisite-development-principles.md).
 
+## Plugin content interoperability
+
+Modernized content plugins should expose content through Geeklog APIs instead of requiring consumers to query plugin tables directly.
+
+The recommended baseline is:
+
+- `plugin_getiteminfo_PLUGIN()` for structured metadata;
+- collection support using `'*'` where the plugin can expose multiple items;
+- common collection options such as `since`, `limit`, and `order` where applicable;
+- `PLG_itemSaved()` on successful creations and updates;
+- `PLG_itemDeleted()` on successful deletions;
+- `plugin_idtourl_PLUGIN()` where supported, with Item Info URL fallback for older Geeklog versions.
+
+This baseline is intended to make the same plugin content reusable by Hello, Hub, IndexNow, Sitemap and future consumers without introducing a separate API for each integration.
+
+See [`plugin-content-interoperability-contract.md`](plugin-content-interoperability-contract.md) for the full proposed contract and implementation priorities.
+
 ---
 
 # API terminology
 
-Three concepts must remain distinct.
+Four concepts must remain distinct.
 
 ### Geeklog Plugin API
 
 The existing `plugin_<api>_<plugin>()` hooks used by Geeklog and plugins.
+
+### Plugin Content Interoperability Contract
+
+A recommended harmonization layer built primarily on existing Geeklog Plugin APIs such as Item Info, lifecycle events and URL resolution. Its purpose is to make content plugins reusable by multiple consumers without coupling those consumers to plugin internals.
 
 ### Future Data API
 
