@@ -54,6 +54,7 @@ Additional conventions:
 
 - [`plugin-persistent-storage-guide.md`](plugin-persistent-storage-guide.md)
 - [`multisite-development-principles.md`](multisite-development-principles.md)
+- [`plugin-shared-files-upgrade-safety.md`](plugin-shared-files-upgrade-safety.md) — required compatibility behavior when several sites share plugin files but upgrade their persisted state at different times.
 
 ### 3. Active modernization roadmap
 
@@ -78,6 +79,7 @@ Eclipse follows the same transition objective as the modernized plugins: native 
 These documents describe direction and proposed contracts. They are not claims about APIs already present in Geeklog.
 
 - [`plugin-content-interoperability-contract.md`](plugin-content-interoperability-contract.md) — recommended common contract for exposing plugin content to Hello, Hub, IndexNow, Sitemap, search, recommendations and future consumers while keeping plugins independent from each other's SQL and internals.
+- [`geeklog-chatgpt-connector.md`](geeklog-chatgpt-connector.md) — architectural concept for a secure Geeklog API plugin plus a ChatGPT connector, allowing ChatGPT to discover, read and later perform explicitly authorized actions on Geeklog without modifying the Core.
 - [`geeklog-2030-roadmap.md`](geeklog-2030-roadmap.md)
 - [`geeklog-marketing-roadmap-2027-2030.md`](geeklog-marketing-roadmap-2027-2030.md)
 
@@ -170,6 +172,8 @@ Upgrade routines should be:
 
 Configuration defaults for new installations and configuration migration for existing installations are separate concerns and should be tested separately.
 
+When plugin files can be shared by several Geeklog sites, new files must also remain operational with the previous supported persisted plugin state until the active site's explicit upgrade completes. See [`plugin-shared-files-upgrade-safety.md`](plugin-shared-files-upgrade-safety.md).
+
 ## Persistent storage
 
 User files and persistent plugin or theme data must not be stored in locations that Geeklog treats as disposable cache.
@@ -189,6 +193,8 @@ Every project storing persistent data should define:
 - migration behavior.
 
 The future **Multisite Manager** can remain a later implementation project while these principles apply immediately. See [`multisite-development-principles.md`](multisite-development-principles.md).
+
+For shared plugin directories, upgrading one site's persisted state must not be required for other sites to keep running after the new files are deployed. The shared-files transition policy is defined in [`plugin-shared-files-upgrade-safety.md`](plugin-shared-files-upgrade-safety.md).
 
 ## Plugin content interoperability
 
