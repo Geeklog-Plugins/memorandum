@@ -79,6 +79,7 @@ Eclipse follows the same transition objective as the modernized plugins: native 
 These documents describe direction and proposed contracts. They are not claims about APIs already present in Geeklog.
 
 - [`plugin-content-interoperability-contract.md`](plugin-content-interoperability-contract.md) — recommended common contract for exposing plugin content to Hello, Hub, IndexNow, Sitemap, search, recommendations and future consumers while keeping plugins independent from each other's SQL and internals.
+- [`geeklog-chatgpt-connector.md`](geeklog-chatgpt-connector.md) — architectural concept for a secure Geeklog API plugin plus a ChatGPT connector, allowing ChatGPT to discover, read and later perform explicitly authorized actions on Geeklog without modifying the Core.
 - [`geeklog-2030-roadmap.md`](geeklog-2030-roadmap.md)
 - [`geeklog-marketing-roadmap-2027-2030.md`](geeklog-marketing-roadmap-2027-2030.md)
 
