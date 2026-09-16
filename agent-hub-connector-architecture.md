@@ -17,6 +17,10 @@ The guiding rule is:
 
 > **Hub provides context. Agent provides machine access. Connectors adapt Agent to a client or provider.**
 
+A second long-term rule applies to protocol evolution:
+
+> **Agent defines the stable provider-neutral machine model. MCP, ChatGPT, REST/OpenAPI and future protocols are adapters over that model, not the model itself.**
+
 ---
 
 ## 1. Component responsibilities
@@ -68,10 +72,11 @@ Agent may provide:
 - capability discovery;
 - read-only resource/search endpoints;
 - compatibility adapters for older Geeklog/plugin APIs where necessary;
-- later authenticated action endpoints;
-- later protocol adapters such as MCP if useful.
+- later authenticated action endpoints.
 
 Agent consumes shared Geeklog contracts. It must not become the owner of content, relations or plugin business logic.
+
+Agent must also remain protocol-neutral. It may host optional protocol modules for deployment convenience, but MCP-, ChatGPT-, REST/OpenAPI- or other protocol-specific schemas must remain adapters over Agent's internal resource/capability/action model. Protocol changes must not force content plugins or Agent's internal model to change unless the underlying Geeklog capability itself changes.
 
 ### Connector — client/provider adapter
 
@@ -80,11 +85,12 @@ A Connector is external or client-facing adaptation code for a specific ecosyste
 Examples:
 
 - ChatGPT Connector;
-- an MCP client/server adapter where kept outside Agent core;
+- an MCP client/server adapter;
 - another AI assistant adapter;
-- an automation-platform adapter.
+- an automation-platform adapter;
+- a REST/OpenAPI adapter when a separate client-facing contract is useful.
 
-A Connector should translate Agent resources and capabilities into the schema and UX expected by that client.
+A Connector should translate Agent resources, capabilities and authorized actions into the schema and UX expected by that client.
 
 A Connector must not:
 
@@ -92,7 +98,8 @@ A Connector must not:
 - recreate Hub's graph;
 - implement plugin business rules;
 - maintain a second capability registry;
-- bypass Agent ACL/capability filtering.
+- bypass Agent ACL/capability filtering;
+- redefine Agent's normalized resource identities as a protocol-specific data model.
 
 ---
 
@@ -112,7 +119,7 @@ Stories / Static Pages / Videos / Documents / Maps / Store / ...
              |                       |
              +----------->-----------+
                          |
-             resources + capabilities
+        resources + capabilities + actions
                          |
           +--------------+--------------+
           |              |              |
@@ -158,7 +165,42 @@ Prefer one shared capability model consumed by all three layers.
 
 ---
 
-## 4. Agent and Hub interaction
+## 4. Stable machine model
+
+Agent should normalize Geeklog data into a stable provider-neutral model before rendering any protocol or output format.
+
+The model should preserve at least these concepts where available:
+
+```text
+identity        = stable type + id
+provider        = owning Core feature or plugin
+canonical_url   = canonical public/internal URL
+content         = normalized machine-readable payload
+language        = explicit language when known
+visibility      = effective access/visibility state
+schema_version  = version of the normalized representation
+capabilities    = operations supported by the resource/provider/context
+```
+
+Not every provider must expose every field, but protocol adapters should consume this normalized model rather than raw database rows or protocol-specific structures.
+
+### Resources, Capabilities and Actions
+
+These concepts must remain distinct:
+
+```text
+Resources     = what a machine can read or retrieve
+Capabilities  = what the current site/provider/context can do
+Actions       = operations the current caller is authorized to trigger
+```
+
+A capability existing does not imply that the current caller may execute it. Public discovery must never be interpreted as write authorization.
+
+This distinction should survive every adapter, including MCP, ChatGPT, REST/OpenAPI and future protocols.
+
+---
+
+## 5. Agent and Hub interaction
 
 When a request is about raw content, Agent should talk to the owning Core/plugin interface directly.
 
@@ -191,9 +233,9 @@ Agent must remain useful without Hub; Hub enrichment is optional.
 
 ---
 
-## 5. Agent and Connector interaction
+## 6. Agent and Connector interaction
 
-Agent exposes provider-neutral machine resources and effective capabilities.
+Agent exposes provider-neutral machine resources, effective capabilities and later authorized actions.
 
 Connector translates them into provider/client-specific concepts.
 
@@ -215,11 +257,11 @@ ChatGPT tool schema
 
 For another client, the same Agent capability may become an MCP tool or another protocol action without modifying Maps.
 
-Therefore ChatGPT-specific schemas, naming and UX belong in the Connector, not in content plugins and not in Agent core.
+Therefore ChatGPT-specific schemas, MCP tool/resource naming, protocol version details and UX belong in the Connector or protocol adapter, not in content plugins and not in Agent core.
 
 ---
 
-## 6. `llms.txt` position
+## 7. `llms.txt` position
 
 `llms.txt` is a public discovery/curation surface managed by Agent.
 
@@ -235,9 +277,28 @@ Agent should generate it from:
 
 The content exposed in `llms.txt` should point to richer Markdown/JSON resources rather than duplicate all site content in one file.
 
+`llms.txt` must remain optional from an architectural perspective: Agent's normalized resource model, capability discovery and future authenticated API must continue to work even if discovery conventions evolve or `llms.txt` is replaced by another mechanism.
+
 ---
 
-## 7. Mono-site and multisite
+## 8. Configuration exposure rule
+
+A visible Configuration Manager option should correspond to functionality that is actually implemented in the installed Agent version, unless it is clearly presented as read-only diagnostic/status information.
+
+Future roadmap concepts should not appear as active administrator controls before the corresponding behavior exists.
+
+Examples:
+
+- do not expose a Markdown enable/disable control before Markdown resources exist;
+- do not expose JSON controls before JSON endpoints exist;
+- do not expose authenticated-action settings before authenticated actions exist;
+- diagnostic feature detection may be displayed before a feature is implemented because it reports environment state rather than promising functionality.
+
+This rule keeps the administration interface aligned with real capabilities and prevents configuration from becoming a second roadmap.
+
+---
+
+## 9. Mono-site and multisite
 
 Agent and Hub must resolve all operations in the active Geeklog site context.
 
@@ -258,7 +319,7 @@ A hostname switch hard-coded in Agent should not be required for normal multisit
 
 ---
 
-## 8. Compatibility target
+## 10. Compatibility target
 
 For the current modernization period, Agent should target:
 
@@ -271,14 +332,14 @@ Code must use the common safe PHP subset and feature-detect newer Geeklog APIs w
 
 ---
 
-## 9. Migration of the existing Connector concept
+## 11. Migration of the existing Connector concept
 
 The existing `geeklog-chatgpt-connector.md` remains useful for security, capability discovery, ACL, scopes, auditability and progressive write access.
 
 Its architecture should now be interpreted as two layers:
 
 ```text
-Geeklog-side generic resource/capability layer
+Geeklog-side generic resource/capability/action layer
     -> Agent plugin
 
 ChatGPT-specific adaptation
@@ -293,8 +354,10 @@ The Connector should become thinner as Agent matures.
 
 ---
 
-## 10. Development rule
+## 12. Development rule
 
 > **Plugins expose shared data and capabilities. Hub interprets relationships. Agent exposes machine-readable access. Connectors adapt that access to a client.**
 
 No layer should duplicate another layer's data ownership, relationship graph, permission model or business logic.
+
+Protocol-specific evolution must remain outside the stable Agent core whenever possible, so future changes to MCP, ChatGPT or other clients do not force rewrites of Geeklog content integrations.
