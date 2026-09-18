@@ -9,6 +9,7 @@ This document fixes the responsibility boundary between **Hub**, **Agent** and e
 It complements:
 
 - `plugin-content-interoperability-contract.md`;
+- `plugin-capability-contract.md`;
 - `llm-agent-content-representation-contract.md`;
 - `geeklog-chatgpt-connector.md`;
 - `multisite-development-principles.md`.
@@ -164,6 +165,28 @@ Connector capability registry
 Prefer one shared capability model consumed by all three layers.
 
 ---
+
+## Shared capability declaration
+
+Agent and Hub must consume the shared capability model defined in `plugin-capability-contract.md` rather than maintaining parallel registries.
+
+A provider may explicitly declare capabilities such as:
+
+```text
+content.read
+content.collection
+content.search
+dashboard.summary
+maps.geo.nearby
+navigation.tree
+```
+
+Existing Geeklog APIs remain the implementation surface. Capability declarations advertise and describe those surfaces; they do not replace them.
+
+Hub's interoperability audit may infer capabilities from existing Plugin APIs when an explicit declaration is absent, but explicit provider declarations should take precedence for capabilities that cannot be inferred safely.
+
+Agent should expose the same provider declarations through its normalized machine model. Eclipse and other administrative consumers may consume the same declarations directly without routing through Agent.
+
 
 ## 4. Stable machine model
 
