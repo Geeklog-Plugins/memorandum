@@ -79,6 +79,7 @@ Eclipse follows the same transition objective as the modernized plugins: native 
 These documents describe direction and proposed contracts. They are not claims about APIs already present in Geeklog.
 
 - [`plugin-content-interoperability-contract.md`](plugin-content-interoperability-contract.md) — recommended common contract for exposing plugin content to Hello, Hub, IndexNow, Sitemap, search, recommendations and future consumers while keeping plugins independent from each other's SQL and internals.
+- [`plugin-capability-contract.md`](plugin-capability-contract.md) — shared provider-neutral capability contract for declaring reusable content, service, dashboard, navigation, relationship and diagnostic capabilities consumed by Agent, Hub, Eclipse, AdSense and future integrations.
 - [`plugin-source-field-audit-mutation-contract.md`](plugin-source-field-audit-mutation-contract.md) — shared contract for permission-aware inspection of exact source text fields and controlled provider-owned mutations, initially motivated by AdSense historical-autotag audit/migration.
 - [`geeklog-chatgpt-connector.md`](geeklog-chatgpt-connector.md) — architectural concept for a secure Geeklog API plugin plus a ChatGPT connector, allowing ChatGPT to discover, read and later perform explicitly authorized actions on Geeklog without modifying the Core.
 - [`geeklog-2030-roadmap.md`](geeklog-2030-roadmap.md)
@@ -212,7 +213,15 @@ The recommended baseline is:
 
 This baseline is intended to make the same plugin content reusable by Hello, Hub, IndexNow, Sitemap and future consumers without introducing a separate API for each integration.
 
-See [`plugin-content-interoperability-contract.md`](plugin-content-interoperability-contract.md) for the full proposed contract and implementation priorities.
+See [`plugin-content-interoperability-contract.md`](plugin-content-interoperability-contract.md) for the content contract and [`plugin-capability-contract.md`](plugin-capability-contract.md) for shared capability discovery, specialized services and the `dashboard.summary` convention used by generic consumers such as Eclipse.
+
+## Shared capability interoperability
+
+Modernized plugins should declare reusable capabilities once rather than forcing Agent, Hub, Eclipse, AdSense or another consumer to maintain a plugin-specific registry. Capability declaration is descriptive and must map to existing Geeklog APIs, bounded `PLG_invokeService()` services or documented versioned provider contracts.
+
+Eclipse should act as a presentation consumer: its dashboard should discover and render provider-owned `dashboard.summary` data instead of querying plugin-private tables. Hub should consume the same declarations and also expose its own relationship/context capabilities. Agent should adapt the same provider contracts to machine-readable resources and tools without becoming a required dependency for plugin-to-plugin interoperability.
+
+See [`plugin-capability-contract.md`](plugin-capability-contract.md).
 
 ---
 
@@ -227,6 +236,10 @@ The existing `plugin_<api>_<plugin>()` hooks used by Geeklog and plugins.
 ### Plugin Content Interoperability Contract
 
 A recommended harmonization layer built primarily on existing Geeklog Plugin APIs such as Item Info, lifecycle events and URL resolution. Its purpose is to make content plugins reusable by multiple consumers without coupling those consumers to plugin internals.
+
+### Plugin Capability Contract
+
+A shared provider-neutral declaration layer for capabilities that can be reused by Agent, Hub, Eclipse, AdSense and other consumers. It does not replace Geeklog APIs: it identifies available resources/services/actions and maps them to Item Info, search, lifecycle, `PLG_invokeService()` or another documented provider-owned contract.
 
 ### Future Data API
 
