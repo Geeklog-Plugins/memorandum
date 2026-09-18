@@ -19,6 +19,8 @@ This contract is intended to support several consumers over time:
 
 The recommended approach is to build on existing Geeklog Plugin APIs rather than create a separate integration API for every consumer.
 
+For capabilities that go beyond normalized content (dashboard summaries, diagnostics, navigation, specialized services and actions), use the shared [`plugin-capability-contract.md`](plugin-capability-contract.md). The capability layer advertises existing provider-owned surfaces; it does not replace Item Info, lifecycle events, search, feeds or services.
+
 > This document describes a recommended interoperability contract. Some capabilities already exist in Geeklog, while collection filtering conventions described here are proposed harmonization rules and are not currently universal Geeklog core requirements.
 
 ---
