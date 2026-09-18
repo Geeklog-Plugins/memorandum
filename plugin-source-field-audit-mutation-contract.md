@@ -19,6 +19,7 @@ It complements:
 
 - `plugin-content-interoperability-contract.md`;
 - `llm-agent-content-representation-contract.md`;
+- `plugin-capability-contract.md`;
 - normal Geeklog Plugin APIs and services.
 
 It does **not** replace `plugin_getiteminfo_*()`. Item Info remains the preferred normalized content contract. This document covers the cases where a consumer needs the exact source fields rather than a cleaned, truncated, rendered or normalized representation.
@@ -52,25 +53,25 @@ Therefore source-field access must be an **explicit capability**, separate from 
 
 ## Capability model
 
-Recommended capability names:
+Recommended capability names, aligned with the shared capability contract:
 
 ```text
 content.read
 content.collection
 
-content.source.read
-content.source.collection
+content.source_fields.read
+content.source_fields.collection
 
-content.source.write
+content.source_fields.update
 ```
 
 Semantics:
 
 - `content.read` — normalized/addressable content can be read.
 - `content.collection` — normalized collections can be enumerated.
-- `content.source.read` — exact source/stored text fields for one authorized item can be inspected.
-- `content.source.collection` — source-auditable items can be enumerated safely in bounded collections.
-- `content.source.write` — one or more explicitly writable source fields can be changed through the owning plugin's own validation/save path.
+- `content.source_fields.read` — exact source/stored text fields for one authorized item can be inspected.
+- `content.source_fields.collection` — source-auditable items can be enumerated safely in bounded collections.
+- `content.source_fields.update` — one or more explicitly writable source fields can be changed through the owning plugin's own validation/save path.
 
 A read capability must never imply a write capability.
 
