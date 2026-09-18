@@ -7,6 +7,7 @@ This document defines a provider-neutral contract for exposing Geeklog content t
 It complements, rather than replaces:
 
 - `plugin-content-interoperability-contract.md` for internal structured content interoperability;
+- `plugin-capability-contract.md` for shared provider capability discovery and service semantics;
 - `geeklog-chatgpt-connector.md` for authenticated external capabilities and actions;
 - native Geeklog Plugin APIs and service APIs;
 - `robots.txt`, XML Sitemap, RSS/Atom, Schema.org and other web standards.
@@ -487,7 +488,7 @@ An agent adapter should consume these relationships rather than infer a permanen
 
 Read resources and executable actions are different things.
 
-A future shared Geeklog capability descriptor should expose enough metadata to generate REST/OpenAPI/MCP/agent schemas without duplicating definitions for every provider.
+The shared capability descriptor defined in `plugin-capability-contract.md` should expose enough metadata to generate REST/OpenAPI/MCP/agent schemas without duplicating definitions for every provider. Agent consumes that contract; it does not own a separate capability registry.
 
 For an executable capability, useful fields include:
 
