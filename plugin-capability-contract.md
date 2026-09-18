@@ -229,6 +229,7 @@ content.syndication
 
 content.fields.read
 content.source_fields.read
+content.source_fields.collection
 content.source_fields.update
 
 navigation.read
@@ -682,7 +683,10 @@ content.read
     normalized readable resource
 
 content.source_fields.read
-    exact named source fields for audit/migration
+    exact named source fields for one item
+
+content.source_fields.collection
+    bounded enumeration of source-auditable items
 
 content.source_fields.update
     explicit provider-owned mutation path
