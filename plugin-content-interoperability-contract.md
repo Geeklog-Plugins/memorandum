@@ -14,6 +14,7 @@ This contract is intended to support several consumers over time:
 - **Sitemap** — discover addressable content;
 - **Content Syndication** — expose plugin content through Geeklog-managed RSS/Atom feeds;
 - **Statistics** — let plugins contribute to Geeklog's global statistics views;
+- **Dashboards and reporting** — retrieve structured popular-content data without plugin-specific SQL;
 - **Search and recommendation features** — reuse structured metadata instead of plugin-specific SQL.
 
 The recommended approach is to build on existing Geeklog Plugin APIs rather than create a separate integration API for every consumer.
@@ -72,9 +73,12 @@ category
 topic
 type
 subtype
+hits
 ```
 
 The exact property set may vary by plugin, but commonly useful names should be kept consistent.
+
+`hits` is the recommended canonical field for a persisted per-item view counter when the plugin maintains one. A plugin may use another internal column name, but consumers should not need to know that implementation detail.
 
 ## Why this matters
 
@@ -96,7 +100,7 @@ The consumer receives only the normalized information it requested.
 
 # 2. Support collection retrieval
 
-For interoperability use cases such as newsletters, recent-content lists, hubs, and recommendations, retrieving one item is not enough.
+For interoperability use cases such as newsletters, recent-content lists, hubs, dashboards, and recommendations, retrieving one item is not enough.
 
 A modernized content plugin should support the existing Geeklog convention of using:
 
@@ -137,7 +141,7 @@ Suggested meanings:
 
 - `since` — return items created or modified at or after this timestamp;
 - `limit` — maximum number of items to return;
-- `order` — requested ordering, initially supporting values such as `modified-desc` or `created-desc`.
+- `order` — requested ordering, initially supporting values such as `modified-desc`, `created-desc`, or `hits-desc` when a plugin exposes per-item view counts.
 
 Possible later extensions may include:
 
@@ -151,6 +155,73 @@ ids
 ```
 
 These filtering options are **recommended interoperability conventions**, not a claim that current Geeklog core already enforces them.
+
+## Per-item view counts and popular-content collections
+
+Content plugins that maintain a per-item view counter should expose it through the same Item Info contract rather than require dashboards or other consumers to read plugin tables directly.
+
+The canonical interoperability field is:
+
+```text
+hits
+```
+
+`hits` represents the plugin's own persisted view or visit count for one addressable content item. A plugin may keep a differently named internal column such as `views`, `sp_hits`, `video_views`, or similar; that internal name should not leak into the interoperability contract.
+
+The field is optional. Plugins that do not track per-item views should simply omit it. Consumers must not treat a missing `hits` value as zero unless that behavior is explicitly appropriate for their use case.
+
+When `hits` is supported, the plugin should expose it for both single-item requests and collection requests where practical:
+
+```php
+$item = PLG_getItemInfo(
+    'PLUGIN',
+    $id,
+    'id,title,url,hits',
+    0,
+    array()
+);
+```
+
+and:
+
+```php
+$items = PLG_getItemInfo(
+    'PLUGIN',
+    '*',
+    'id,title,url,hits,type',
+    0,
+    array(
+        'limit' => 10,
+        'order' => 'hits-desc'
+    )
+);
+```
+
+Recommended semantics for `hits-desc` are:
+
+- return only addressable items the requesting user is allowed to see;
+- order by the normalized `hits` value from highest to lowest;
+- honor `limit`;
+- keep URL generation and permission checks inside the plugin;
+- avoid exposing draft, private, disabled, or otherwise inaccessible items merely because they have historical hits.
+
+This supports consumers such as administration dashboards, reporting tools, Hub, recommendation features, and future analytics views without coupling them to plugin-specific SQL.
+
+### Aggregate statistics are a different contract
+
+Per-item popularity and plugin-wide statistics should remain distinct:
+
+```text
+plugin_statssummary_*() / plugin_showstats_*()
+    -> aggregate or presentation-oriented plugin statistics
+
+plugin_getiteminfo_*('*', ..., order = hits-desc)
+    -> structured list of the plugin's most-viewed individual content items
+```
+
+A plugin may implement either capability or both. Implementing native statistics callbacks does not by itself provide a structured popular-content collection. Conversely, exposing `hits` through Item Info does not replace the native `/stats.php` callbacks.
+
+Geeklog core content already demonstrates this distinction: stories have a per-item `hits` value, while Static Pages maintain `sp_hits` internally. A modernized interoperability layer should normalize such counters to `hits` for consumers.
 
 ---
 
@@ -282,7 +353,7 @@ plugin_whatsnewsupported_PLUGIN()
 plugin_getwhatsnew_PLUGIN()
 ```
 
-Example:
+Example for Maps:
 
 ```php
 plugin_whatsnewsupported_maps()
@@ -375,6 +446,8 @@ Statistics support is **not required for basic content interoperability** and sh
 
 Consumers should prefer these native callbacks over direct reads of another plugin's tables when the goal is to obtain the plugin's own statistical presentation or summary.
 
+For a structured list of individual popular items, consumers should instead request the optional `hits` field through `plugin_getiteminfo_*()` collection support and use `order => 'hits-desc'` when the plugin supports it. This avoids overloading presentation-oriented statistics callbacks with a second data-contract role.
+
 ## Content Syndication
 
 Plugins that should be available through Geeklog's **Content Syndication** administration (`/admin/syndication.php`) can expose native feed support through:
@@ -450,6 +523,27 @@ Geeklog services should be added when another plugin genuinely needs a specializ
 
 Services should not be introduced merely to duplicate `plugin_getiteminfo_*()`.
 
+### Exact source-field inspection and controlled mutation
+
+Some consumers need the exact stored/editorial source rather than a normalized Item Info representation. Examples include historical-autotag audits, content migration tools, language audits and controlled refactoring.
+
+That need must remain distinct from ordinary `content.read`.
+
+Plugins that support such workflows should follow the shared source-field contract in:
+
+[`plugin-source-field-audit-mutation-contract.md`](plugin-source-field-audit-mutation-contract.md)
+
+Key rules:
+
+- expose exact source fields only through an explicit capability;
+- keep read and write capabilities separate;
+- expose stable provider-owned field identifiers instead of SQL column names;
+- keep permissions, validation, save logic, lifecycle notifications and cache invalidation inside the owning plugin;
+- do not require consumers such as AdSense to read or update private plugin tables;
+- support bounded collection/audit access for large installations where practical.
+
+The initial reference consumer is AdSense, which needs to find and optionally remove historical tags such as `[adsense:1]` and `[leaderboard:1]` without rewriting unrelated content.
+
 ---
 
 # 8. Recommended implementation priorities
@@ -458,9 +552,10 @@ Services should not be introduced merely to duplicate `plugin_getiteminfo_*()`.
 | --- | --- | --- |
 | **P1** | `plugin_getiteminfo_PLUGIN()` | Expose structured content metadata |
 | **P1** | `'*'` collection support | Expose multiple content items and provide the XMLSitemap fallback path |
-| **P1** | `since`, `limit`, `order` options | Retrieve recent or changed content |
+| **P1** | `since`, `limit`, `order` options | Retrieve recent, changed, or ordered content |
 | **P1** | `PLG_itemSaved()` | Signal create/update lifecycle changes |
 | **P1** | `PLG_itemDeleted()` | Signal deletions |
+| **P2** | optional `hits` field + `hits-desc` ordering | Expose per-item popularity to dashboards and other structured consumers when the plugin tracks views |
 | **P2** | `plugin_idtourl_PLUGIN()` | Resolve canonical item URLs where supported |
 | **P2** | `plugin_collectSitemapItems_PLUGIN()` | Provide optimized/native XML Sitemap collection where useful |
 | **P2/P3** | `plugin_getfeednames_PLUGIN()` + `plugin_getfeedcontent_PLUGIN()` | Participate in Content Syndication when the content type is feed-worthy |
@@ -470,7 +565,7 @@ Services should not be introduced merely to duplicate `plugin_getiteminfo_*()`.
 | **P3** | `plugin_getwhatsnew_PLUGIN()` | Render recent items in What's New |
 | Future | `plugin_getrelateditems_PLUGIN()` | Support Hub relations and recommendations |
 
-For the next modernization work on **Maps, Documents, Videos, Store**, and similar content plugins, the P1 capabilities should be treated as the common interoperability baseline. P2/P3 distribution capabilities should be added when they fit the plugin's role and user value rather than mechanically implemented everywhere.
+For the next modernization work on **Maps, Documents, Videos, Store**, and similar content plugins, the P1 capabilities should be treated as the common interoperability baseline. Plugins that already maintain per-item view counters should additionally implement the P2 `hits` capability so dashboards and other consumers can rank content without direct SQL access. Other P2/P3 distribution capabilities should be added when they fit the plugin's role and user value rather than mechanically implemented everywhere.
 
 ---
 
@@ -491,6 +586,7 @@ url
 description or excerpt
 date-created
 date-modified
+hits (when Maps maintains a per-item view counter)
 ```
 
 and collection queries such as:
@@ -507,6 +603,17 @@ $items = plugin_getiteminfo_maps(
     'id,title,url,excerpt,date-modified',
     0,
     $options
+);
+```
+
+If Maps tracks views per map, it should additionally support the normalized popularity query:
+
+```php
+$popular = plugin_getiteminfo_maps(
+    '*',
+    'id,title,url,hits,type',
+    0,
+    array('limit' => 10, 'order' => 'hits-desc')
 );
 ```
 
@@ -572,7 +679,7 @@ Hub should:
 - listen to lifecycle events rather than poll plugin tables where practical;
 - retrieve metadata through Item Info after an event;
 - resolve URLs through `plugin_idtourl_*()` when available, with an Item Info fallback;
-- audit native Statistics, Content Syndication, and XML Sitemap capabilities separately from basic content readiness;
+- audit native Statistics, Content Syndication, XML Sitemap, and per-item `hits` capabilities separately from basic content readiness;
 - avoid becoming the owner of another plugin's content.
 
 ## Content Syndication
@@ -588,6 +695,8 @@ A plugin should not need XMLSitemap-specific SQL adapters merely to become disco
 ## Other consumers
 
 IndexNow, Search, AI/agent layers, dashboards, and future integrations should reuse the same normalized metadata and native Geeklog callback surfaces wherever practical rather than invent plugin-specific adapters.
+
+Dashboards that rank individual content by popularity should use the optional `hits` field and `hits-desc` collection ordering instead of reading plugin tables directly. If a plugin does not expose that capability, consumers should degrade gracefully rather than infer plugin-specific table or column names.
 
 ---
 
@@ -618,11 +727,11 @@ They should interact through a small, stable Geeklog interoperability surface:
         ↓                     ↓          feeds     sitemap     stats
  structured data             Hub       syndication  collector  callbacks
         │
-   ┌────┼───────────────┐
-   ↓    ↓               ↓
- Hello  Hub          IndexNow / other consumers
+   ┌────┼───────────────────────┐
+   ↓    ↓                       ↓
+ Hello  Hub          dashboards / IndexNow / other consumers
 ```
 
-The long-term objective is not to create a Hub-specific or Hello-specific API.
+The long-term objective is not to create a Hub-specific, Hello-specific, or Eclipse-specific API.
 
 It is to make Geeklog plugins **interoperable by design**, so multiple consumers can reuse the same content contract and Geeklog's existing distribution surfaces without coupling themselves to plugin internals.

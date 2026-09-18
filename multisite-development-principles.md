@@ -37,6 +37,45 @@ $_CONF['site_admin_url']
 
 rather than recreating host detection or maintaining a second site-selection mechanism inside each plugin.
 
+## Bootstrap-critical site settings
+
+Some multisite values are not ordinary runtime customizations. They must be resolved **before Geeklog initializes Core services**.
+
+At minimum, treat these settings as bootstrap-critical when they vary by site:
+
+```php
+$_CONF['path_data']
+$_CONF['path_log']
+$_CONF['path_images']
+$_CONF['images_url']
+$_CONF['site_url']
+$_CONF['site_admin_url']
+```
+
+Other installation-specific paths should follow the same rule when a Core service, cache, logger, template system, editor, media handler or plugin may initialize from them during bootstrap.
+
+The active host/site context must therefore select these values early enough that every later Core component sees the final site-specific value on its first use.
+
+Recommended order:
+
+```text
+HTTP_HOST / site selection
+        ↓
+site-specific bootstrap configuration
+        ↓
+final path_data / path_log / paths / URLs
+        ↓
+Geeklog Core initialization
+        ↓
+plugins and lib-custom.php
+```
+
+Do **not** defer bootstrap-critical overrides to `lib-custom.php` when the corresponding Core service may already have initialized.
+
+For example, Geeklog 2.2.2 initializes `Geeklog\Log` from the current `$_CONF['path_log']` during `lib-common.php`. The logger keeps that directory in static state and does not normally reinitialize it later in the request. Changing `$_CONF['path_log']` afterwards can therefore produce inconsistent behavior: code reading `$_CONF['path_log']` may see the new site-specific path while `Geeklog\Log` still reads or writes through the path captured earlier.
+
+This rule is about **initialization order**, not about duplicating multisite detection inside plugins. Plugins should still consume the already-selected site context rather than implement their own host routing.
+
 ## Persistent data isolation
 
 Persistent files should derive their storage path from the current site's configuration.

@@ -1,611 +1,195 @@
-# Geeklog ChatGPT Connector — Plugin and Connector Concept
+# Geeklog ChatGPT Connector — External Adapter Concept
 
 Status: **Architectural concept**
 
-This document defines a future integration between Geeklog and ChatGPT using a secure Geeklog-side API/resource layer and an external ChatGPT connector.
+## Purpose
 
-The objective is not to embed a generic chatbot inside Geeklog. The objective is to let ChatGPT discover, read and eventually perform authorized Geeklog actions through structured interfaces while preserving Geeklog as the system of record.
+This document defines the future **ChatGPT-specific adapter** for Geeklog.
 
-The connector must fit the wider architecture already documented in this repository:
+The Geeklog-side provider-neutral machine access layer is now assigned to the **Agent plugin**. The ChatGPT Connector must therefore remain a thin external/client adapter over Agent rather than becoming a second Geeklog API architecture.
 
-- existing Geeklog Plugin API;
-- Plugin Content Interoperability Contract;
-- existing Geeklog webservice/service layer;
-- future common Data/API conventions;
-- future common Events contract;
-- Hub as internal relationship/context orchestrator;
-- Hello as communication layer for registered users;
-- IndexNow as indexing transport;
-- future provider-neutral agent adapters.
+See also:
 
----
+- `agent-hub-connector-architecture.md`;
+- `llm-agent-content-representation-contract.md`;
+- `plugin-content-interoperability-contract.md`;
+- `multisite-development-principles.md`.
 
-## 1. Core principle
+The architectural rule is:
 
-> **Geeklog owns the data and business rules. Shared Geeklog contracts expose capabilities. Hub provides content context. Hello communicates with registered users. IndexNow submits changed URLs. The Connector securely exposes selected capabilities to ChatGPT and other external clients.**
-
-The Connector must not become a second internal application architecture.
+> **Hub provides context. Agent provides machine access. The ChatGPT Connector adapts Agent resources and capabilities to ChatGPT.**
 
 ---
 
-## 2. Architectural position
+## 1. Component boundary
 
-Preferred long-term architecture:
+### Geeklog Agent plugin
 
-```text
-                      User
-                       |
-                       v
-                    ChatGPT
-                       |
-                       v
-               ChatGPT Connector
-                       |
-              HTTPS / structured tools
-                       |
-                       v
-          Geeklog external API / resource layer
-                       |
-       +---------------+---------------+
-       |               |               |
-       v               v               v
-      Hub            Hello        direct resources
- context/relations communication  Core + plugins
-       |               |               |
-       +---------------+---------------+
-                       |
-          Geeklog Plugin + Service APIs
-                       |
-       Stories / Static Pages / Maps / Documents
-       Videos / Forum / Store / IndexNow / others
-```
+Agent is responsible for the Geeklog-side generic layer:
 
-The Connector is an **external gateway**, not the owner of relationships, newsletters, indexing, commerce or other plugin logic.
+- `/llms.txt` discovery;
+- normalized content resources;
+- Markdown/JSON representations;
+- collection retrieval;
+- capability discovery;
+- permission-aware access;
+- multisite isolation;
+- compatibility adapters across Geeklog 2.1.1–2.2.2;
+- later authenticated resource/action APIs;
+- reusable descriptors suitable for REST/OpenAPI/MCP/other clients.
+
+### ChatGPT Connector
+
+The Connector is responsible only for ChatGPT-facing adaptation:
+
+- connecting/authenticating a ChatGPT client to Agent;
+- translating Agent capability descriptors into ChatGPT tool schemas;
+- translating Agent resources/results into the format expected by ChatGPT;
+- applying ChatGPT-specific naming, descriptions and UX conventions;
+- forwarding authorized calls to Agent;
+- presenting errors/confirmation flows appropriately for the client.
+
+The Connector does **not** own Geeklog content, permissions, plugin discovery, Hub relationships or plugin business logic.
 
 ---
 
-## 3. Existing Geeklog mechanisms that can be reused
-
-Review of Geeklog 2.2.x Core shows that the Connector does **not** need a completely new plugin capability mechanism from zero.
-
-Geeklog already contains several useful building blocks.
-
-### 3.1 Enabled-plugin registry
-
-Geeklog already maintains the list of active plugins in `$_PLUGINS`.
-
-This provides the first level of discovery:
+## 2. Reference architecture
 
 ```text
-Which plugins are installed and enabled on this site?
+Content plugins / Geeklog Core
+          |
+          v
+ shared Geeklog contracts
+          |
+     +----+----+
+     |         |
+     v         v
+    Hub      Agent
+ context   machine access
+     |         |
+     +---->----+
+          |
+ resources + effective capabilities
+          |
+          v
+  ChatGPT Connector
+          |
+          v
+       ChatGPT
 ```
 
-The Connector should reuse active Geeklog site context instead of maintaining its own plugin registry.
-
-### 3.2 Existing Plugin API feature detection
-
-Many capabilities can already be inferred by testing whether a normal Geeklog Plugin API callback exists.
-
-Examples:
-
-```text
-plugin_getiteminfo_PLUGIN
-plugin_getrelateditems_PLUGIN
-plugin_dopluginsearch_PLUGIN
-plugin_idToURL_PLUGIN
-plugin_getBlocks_PLUGIN
-plugin_getfeednames_PLUGIN
-plugin_getfeedcontent_PLUGIN
-plugin_collectSitemapItems_PLUGIN
-```
-
-These callbacks can be mapped to generic capability categories without requiring a new declaration from the plugin.
-
-Conceptually:
-
-```text
-plugin_getiteminfo_*      -> content.read / content.collection
-plugin_dopluginsearch_*   -> content.search
-plugin_getrelateditems_*  -> content.related
-plugin_idToURL_*          -> content.url.resolve
-```
-
-This should be the preferred path whenever the capability can be inferred reliably.
-
-### 3.3 Existing webservice enablement callback
-
-Geeklog already provides:
-
-```php
-plugin_wsEnabled_PLUGIN()
-```
-
-through:
-
-```php
-PLG_wsEnabled($type)
-```
-
-This is already a basic declaration by a plugin that it exposes services through Geeklog's webservice layer.
-
-It should be treated as an existing capability signal rather than replaced by a Connector-specific equivalent.
-
-### 3.4 Existing generic service dispatcher
-
-Geeklog already provides:
-
-```php
-PLG_invokeService($type, $action, $args, &$output, &$svc_msg)
-```
-
-The dispatcher resolves an action dynamically as:
-
-```text
-service_ACTION_PLUGIN()
-```
-
-and invokes it when the service function exists and `PLG_wsEnabled($type)` is true.
-
-This is highly relevant to the future Connector because it already separates:
-
-```text
-consumer
-   ↓
-plugin + action
-   ↓
-PLG_invokeService()
-   ↓
-service_ACTION_PLUGIN()
-   ↓
-plugin business logic
-```
-
-The Connector should therefore prefer this service abstraction for plugin-specific actions where it is appropriate rather than inventing direct calls into plugin internals.
-
-### 3.5 Existing service result contract
-
-`PLG_invokeService()` already standardizes broad service results with constants such as:
-
-```text
-PLG_RET_OK
-PLG_RET_ERROR
-PLG_RET_PERMISSION_DENIED
-PLG_RET_AUTH_FAILED
-PLG_RET_PRECONDITION_FAILED
-```
-
-Services also use output and service-message structures.
-
-This provides a useful starting point for normalizing future JSON error and result responses.
-
-### 3.6 Existing AtomPub introspection
-
-Geeklog's AtomPub webservice implementation already contains an introspection mode.
-
-It:
-
-- inspects Story plus active plugins;
-- asks `PLG_wsEnabled()` whether each plugin exposes webservices;
-- publishes a service collection for enabled providers;
-- invokes the `getTopicList` service where available.
-
-This proves that Geeklog already has the architectural concept:
-
-```text
-client
-   ↓
-service discovery
-   ↓
-plugin service
-```
-
-The future Connector should modernize and extend this idea instead of creating unrelated discovery infrastructure.
-
-### 3.7 Existing standard service actions
-
-The current AtomPub layer already maps HTTP operations to plugin services approximately as follows:
-
-```text
-GET     -> service_get_PLUGIN
-POST    -> service_submit_PLUGIN
-PUT     -> service_submit_PLUGIN with edit context
-DELETE  -> service_delete_PLUGIN
-```
-
-It also uses:
-
-```text
-service_getTopicList_PLUGIN
-```
-
-for introspection/category information.
-
-Stories and Static Pages already implement substantial parts of this pattern.
-
-Therefore the first Connector proof of concept can use Stories and Static Pages as reference implementations when evaluating a modern JSON resource layer.
+Agent may consume Hub services when context/relations are needed. The Connector must not query Hub directly in a way that bypasses Agent's authorization and site context.
 
 ---
 
-## 4. What Geeklog does not currently provide
+## 3. No Connector-specific plugin API
 
-The existing service layer is useful, but it is **not yet a complete capability contract for modern clients or agents**.
-
-The current AtomPub introspection can identify which plugins expose webservices, but it does not provide a complete machine-readable declaration of:
-
-- every action exposed by the plugin;
-- semantic capability names;
-- input argument schemas;
-- output schemas;
-- read versus write classification;
-- destructive or sensitive action classification;
-- required Geeklog feature/permission;
-- whether human confirmation is recommended;
-- whether personal data can be returned;
-- pagination/filtering semantics;
-- API stability/version of an action.
-
-For example, knowing that `maps` has webservices enabled does not tell a client whether it supports:
-
-```text
-content.search
-geo.nearby
-marker.update
-```
-
-or what arguments `geo.nearby` expects.
-
-This missing descriptive metadata is the main capability-discovery gap to solve.
-
----
-
-## 5. Shared contracts, not Connector-specific plugin APIs
-
-The Connector must consume generic Geeklog contracts.
-
-It should **not** introduce callbacks such as:
+Content plugins must not add callbacks such as:
 
 ```php
 plugin_connectorCapabilities_maps()
-plugin_connectorTools_documents()
+plugin_chatgptTools_documents()
 ```
 
-when the same information can be expressed through existing Plugin APIs, Geeklog services or a shared capability descriptor.
+The Connector should consume Agent's normalized capability model, which itself is built from shared Geeklog contracts such as:
 
-The same plugin capability should be reusable by:
+```text
+plugin_getiteminfo_*
+plugin_dopluginsearch_*
+plugin_getrelateditems_*
+plugin_idtourl_*
+PLG_wsEnabled()
+PLG_invokeService()
+shared capability descriptors
+```
+
+A capability should be defined once and then reusable by:
 
 ```text
 Hub
-Hello
-IndexNow
-Connector
-Search / Recommendations
-future REST clients
-future MCP / agent clients
+Agent
+administration tools
+REST/OpenAPI adapters
+MCP adapters
+ChatGPT Connector
+future clients
 ```
-
-This prevents every consumer from creating its own integration contract.
 
 ---
 
-## 6. Proposed capability-discovery model
+## 4. Capability mapping
 
-Capability discovery should be built in layers, reusing existing Geeklog facilities first.
+Agent exposes an effective capability set after applying site state and permissions.
 
-### Layer 1 — infer standard capabilities
-
-The discovery layer detects existing callbacks and service support.
-
-Example:
-
-```text
-plugin_getiteminfo_maps exists
-    -> content.read
-
-plugin_dopluginsearch_maps exists
-    -> content.search
-
-plugin_getrelateditems_maps exists
-    -> content.related
-
-plugin_idToURL_maps exists
-    -> content.url.resolve
-
-plugin_wsEnabled_maps returns true
-    -> services.available
-```
-
-No new code is required in Maps for capabilities that can be inferred safely.
-
-### Layer 2 — inspect known service actions
-
-If webservices are enabled, the shared layer may detect known existing service functions such as:
-
-```text
-service_get_maps
-service_submit_maps
-service_delete_maps
-service_getTopicList_maps
-```
-
-This may be useful for compatibility and auditing.
-
-However, simple `function_exists()` discovery must not automatically make a sensitive action available to an external client.
-
-Existence means only:
-
-> the implementation is present.
-
-It does not mean:
-
-> this Connector credential is authorized to use it.
-
-### Layer 3 — explicit metadata only where inference is insufficient
-
-Specialized actions require an explicit shared descriptor.
-
-Examples:
+Example Agent capability:
 
 ```text
 maps.geo.nearby
-hub.context.read
-hello.campaigns.test
-indexnow.submit
 ```
 
-The exact implementation is not frozen.
-
-Two possibilities should be evaluated.
-
-#### Option A — extend service introspection
-
-A plugin could expose a reserved service such as:
-
-```text
-service_capabilities_PLUGIN
-```
-
-or another generic service-description action invoked through `PLG_invokeService()`.
-
-Conceptual call:
-
-```php
-PLG_invokeService(
-    'maps',
-    'capabilities',
-    array(),
-    $output,
-    $svc_msg
-);
-```
-
-This has the advantage of reusing the existing service architecture without adding a new Plugin API family.
-
-#### Option B — introduce a generic Plugin API callback
-
-If a dedicated callback proves cleaner, a future convention could be:
-
-```php
-plugin_getcapabilities_PLUGIN()
-```
-
-or a similarly named shared Geeklog callback.
-
-This must be a **generic Geeklog capability declaration**, not a Connector callback.
-
-Before choosing Option B, implementation should test whether extending `PLG_invokeService()` introspection is sufficient.
-
-### Preferred evaluation order
-
-```text
-1. existing Plugin API inference
-        ↓
-2. existing PLG_wsEnabled / service discovery
-        ↓
-3. shared service-description extension
-        ↓
-4. new generic plugin_getcapabilities_* callback only if needed
-```
-
-This avoids unnecessary Core/API expansion.
-
----
-
-## 7. Capability descriptor requirements
-
-Whether implemented as a service or future Plugin API callback, the descriptor should be able to express more than a flat list.
-
-Conceptual example:
-
-```php
-array(
-    'geo.nearby' => array(
-        'service' => 'nearby',
-        'mode' => 'read',
-        'permission' => 'maps.view',
-        'risk' => 'low',
-        'arguments' => array(
-            'latitude' => 'number',
-            'longitude' => 'number',
-            'radius_km' => 'number',
-            'category' => 'string|null'
-        )
-    ),
-
-    'marker.update' => array(
-        'service' => 'updateMarker',
-        'mode' => 'write',
-        'permission' => 'maps.edit',
-        'risk' => 'medium'
-    )
-);
-```
-
-The schema shown above is illustrative, not frozen.
-
-At minimum, a future descriptor should be able to communicate:
+Descriptor may include:
 
 ```text
 capability id
 service/action name
-read/write classification
+mode (read/write)
 required permission
-risk classification
+risk class
 argument schema
-result schema or result type
-optional description
+result schema/type
+description
 version/stability
 ```
 
-Later additions may include:
+The Connector maps that descriptor to the ChatGPT-facing tool.
+
+Conceptual flow:
 
 ```text
-confirmation recommendation
-personal-data flag
-bulk-action flag
-idempotency indication
-pagination support
-filtering support
-rate-limit hints
+Agent capability
+    maps.geo.nearby
+        |
+        v
+shared descriptor
+        |
+        v
+ChatGPT Connector
+        |
+        v
+ChatGPT tool
+    maps_nearby(...)
 ```
+
+Tool schemas should be generated or mapped from shared Agent metadata where practical instead of being duplicated manually in every Connector release.
 
 ---
 
-## 8. Technical capability versus authorized capability
+## 5. Technical capability versus authorized capability
 
-This distinction is essential.
-
-A plugin may technically implement:
-
-```text
-hello.campaigns.send
-```
-
-while the current Connector credential is allowed only:
-
-```text
-hello.campaigns.read
-hello.stats.read
-hello.campaigns.draft
-hello.campaigns.test
-```
-
-The public capability endpoint must therefore expose the **effective authorized capability set**, not merely everything present in PHP.
+The Connector must use Agent's **effective authorized capability set**, not merely everything technically implemented by PHP/plugins.
 
 Conceptually:
 
 ```text
 implemented capability
-        AND
-plugin enabled state
-        AND
-Connector credential scope
-        AND
-Geeklog ACL
-        AND
-plugin/resource permission
-        =
-externally visible capability
+AND plugin enabled state
+AND active Geeklog site
+AND credential scope
+AND Geeklog ACL
+AND plugin/resource permission
+=
+externally available capability
 ```
 
-A sensitive action that the caller cannot use should normally not be advertised as an available tool.
+The Connector must never broaden access beyond Agent/Geeklog permissions.
 
 ---
 
-## 9. Responsibilities by component
+## 6. Hub usage
 
-### Content-owning plugins and Core
+Hub remains the internal content relationship and context orchestrator.
 
-Examples:
-
-- Stories;
-- Static Pages;
-- Maps;
-- Documents;
-- Videos;
-- Forum;
-- Store.
-
-They remain responsible for:
-
-- their own data;
-- permissions;
-- canonical URLs;
-- validation;
-- business rules;
-- specialized rendering;
-- create/update/delete behavior.
-
-### Hub
-
-Hub is responsible for:
-
-- pillars;
-- stable `type + id` relationships;
-- related-content context;
-- dependency graph;
-- orphan/broken relationship diagnostics;
-- affected-page detection;
-- editorial suggestions;
-- delegation to specialized services.
-
-The Connector must consume Hub capabilities where useful instead of duplicating Hub logic.
-
-### Hello
-
-Hello is responsible for communication with registered users:
-
-- campaigns;
-- newsletters and digests;
-- recipient groups;
-- queueing;
-- throttling;
-- delivery;
-- unsubscribe/resubscribe;
-- open tracking;
-- click tracking;
-- campaign and subscriber statistics.
-
-The Connector may expose authorized Hello operations but must not directly read or write Hello tables.
-
-### IndexNow
-
-IndexNow remains responsible for:
-
-- URL queueing;
-- batch submission;
-- deduplication;
-- provider interaction;
-- submission status.
-
-The Connector or Hub may request IndexNow actions through its public service surface but must not reproduce its transport logic.
-
----
-
-## 10. Connector use of Hub
-
-Hub should be the preferred source when the request is about **relationships or thematic context**.
-
-Example:
-
-> Analyze everything connected to the Rocket Stove pillar and tell me what needs attention.
-
-Possible flow:
-
-```text
-ChatGPT
-   ↓
-Connector
-   ↓
-Hub context
-   ↓
-pillar + related items + diagnostics + suggestions
-   ↓
-Connector retrieves selected full items only when needed
-   ↓
-ChatGPT analysis
-```
-
-Conceptual Hub-facing capabilities might include:
+Potential Hub-derived Agent capabilities include:
 
 ```text
 hub.context.read
@@ -615,402 +199,201 @@ hub.integrity.read
 hub.suggestions.read
 ```
 
-Hub should expose these through shared services/capability metadata rather than Connector-specific callbacks.
-
-The Connector MUST NOT maintain its own Hub relationship graph.
-
----
-
-## 11. Connector use of Hello
-
-Hello should be treated as a communication/action plugin, not as a content plugin.
-
-Potential read capabilities:
+When ChatGPT requests thematic/contextual information, the flow should be:
 
 ```text
-hello.campaigns.read
-hello.stats.read
-hello.queue.read
-hello.subscribers.summary
-```
-
-Potential write/action capabilities:
-
-```text
-hello.campaigns.draft
-hello.campaigns.test
-hello.campaigns.queue
-hello.campaigns.pause
-hello.campaigns.resume
-hello.campaigns.stop
-```
-
-Sending a live campaign must be a high-risk operation with an explicit permission distinct from campaign drafting.
-
-Potential high-risk capability:
-
-```text
-hello.campaigns.send
-```
-
-Subscriber personally identifiable information must be separately protected.
-
-For example:
-
-```text
-hello.stats.read
-```
-
-must not automatically imply:
-
-```text
-hello.personal_data.read
-```
-
-The default Connector should prefer aggregated campaign/subscriber statistics when detailed personal data is not required.
-
----
-
-## 12. Multi-plugin editorial workflow
-
-A key future use case is cross-plugin editorial assistance without cross-plugin coupling.
-
-Example request:
-
-> Prepare a newsletter about the latest Rocket Stove content.
-
-Possible flow:
-
-```text
-Hub
-  ↓
-relevant new/updated content
-  ↓
+ChatGPT
+   ↓
 Connector
-  ↓
-ChatGPT drafts summary/campaign copy
-  ↓
-Hello creates campaign draft
-  ↓
-Hello sends administrator test
-  ↓
-human validation
-  ↓
-Hello queues/sends campaign
+   ↓
+Agent
+   ↓
+Hub service
+   ↓
+Agent-normalized result
+   ↓
+Connector
+   ↓
+ChatGPT
 ```
 
-Hub decides **what belongs together**.
-
-Hello decides **how and to whom it is sent**.
-
-ChatGPT assists with synthesis and wording.
-
-Connector provides secure access between them.
+The Connector must not maintain a second Hub relationship graph or reproduce Hub's orphan/dependency logic.
 
 ---
 
-## 13. Direct resource operations
+## 7. Other plugin responsibilities
 
-Not every request should go through Hub.
+### Hello
 
-Direct resource tools are appropriate for operations such as:
+Hello owns registered-user communication:
 
-```text
-get_story
-search_stories
-update_story
-get_staticpage
-update_staticpage
-search_documents
-get_document
-search_markers
-get_marker
-search_videos
-get_video
-search_products
-get_product
-```
+- campaigns;
+- newsletters/digests;
+- recipient groups;
+- queueing/throttling;
+- delivery;
+- unsubscribe handling;
+- campaign statistics.
 
-These operations should delegate to the owning Core/plugin APIs or service layer.
+Agent may later expose authorized Hello capabilities. Connector merely maps them to ChatGPT tools.
 
-Hub should be called only when Hub-specific context, relations or diagnostics are needed.
+### IndexNow
 
----
+IndexNow owns URL queueing, deduplication, provider submission and status.
 
-## 14. External capability endpoint
+Agent may expose IndexNow status/actions through shared services. Connector does not reproduce transport logic.
 
-The external JSON/resource layer should expose what a specific Geeklog installation and authenticated caller actually support.
+### Content plugins
 
-Conceptual endpoint:
-
-```text
-GET /api/geeklog/v1/capabilities
-```
-
-Conceptual result:
-
-```json
-{
-  "site": "example.org",
-  "resources": {
-    "stories": [
-      "content.read",
-      "content.search"
-    ],
-    "maps": [
-      "content.read",
-      "content.search",
-      "geo.nearby"
-    ],
-    "hub": [
-      "hub.context.read"
-    ],
-    "hello": [
-      "hello.campaigns.read",
-      "hello.stats.read",
-      "hello.campaigns.draft",
-      "hello.campaigns.test"
-    ]
-  }
-}
-```
-
-The result must be filtered by permissions before it is returned.
-
-It should not simply dump every PHP function detected on the server.
+Stories, Static Pages, Maps, Documents, Videos, Forum, Store and similar plugins remain authoritative for their own data, validation, permissions and mutations.
 
 ---
 
-## 15. Mapping capabilities to ChatGPT tools
+## 8. Read-only first
 
-The Connector adapter can translate effective Geeklog capabilities into tools understandable by ChatGPT.
+The first Connector implementation should consume a proven read-only Agent API.
 
-Example:
-
-```text
-Geeklog capability
-    maps.geo.nearby
-
-        ↓ descriptor
-
-service
-    nearby
-
-arguments
-    latitude
-    longitude
-    radius_km
-    category
-
-        ↓ Connector
-
-ChatGPT tool
-    maps_nearby(...)
-```
-
-This means tool schemas can eventually be generated from shared Geeklog capability metadata instead of being manually duplicated in every Connector release.
-
-The same descriptors may later generate or assist:
+Useful initial capabilities may include:
 
 ```text
-REST documentation
-OpenAPI descriptions
-MCP tool descriptions
-administration capability reports
-Hub interoperability audits
+site.info.read
+capabilities.read
+content.read
+content.collection
+content.search
+content.recent
+content.popular
+content.featured
+hub.context.read
+hub.related.read
+hub.integrity.read
 ```
+
+No write action is required for the first production-ready Connector.
 
 ---
 
-## 16. Initial read-only tools
+## 9. Controlled write progression
 
-A first proof of concept should remain small.
+Write support should be introduced only after Agent implements scoped authentication, auditing and risk classification.
 
-Recommended baseline:
-
-```text
-get_site_info
-get_capabilities
-list_topics
-search_stories
-get_story
-search_staticpages
-get_staticpage
-list_plugins
-```
-
-Stories and Static Pages are especially useful reference resources because Geeklog already implements webservice/service patterns for them.
-
-If Hub is installed and exposes the required service:
-
-```text
-get_hub_context
-get_related_items
-get_integrity_report
-```
-
-If Hello is installed:
-
-```text
-list_hello_campaigns
-get_hello_campaign_stats
-get_hello_queue_status
-```
-
-No personal subscriber details should be exposed in the default proof of concept.
-
----
-
-## 17. Controlled write progression
+Recommended progression:
 
 ### Phase 1 — Read only
 
-Validate:
+- retrieve resources;
+- search/list content;
+- read Hub context;
+- read aggregate service/plugin status.
 
-- authentication;
-- ACL;
-- capability discovery;
-- service invocation;
-- stable JSON schemas;
-- Hub context reuse;
-- Hello summary/statistics exposure;
-- multisite isolation.
+### Phase 2 — Draft/safe changes
 
-### Phase 2 — Draft creation and safe updates
-
-Add:
+Potential capabilities:
 
 ```text
-create_story_draft
-update_story
-create_staticpage_draft
-update_staticpage
-create_hello_campaign_draft
+story.draft.create
+story.draft.update
+staticpage.draft.create
+staticpage.draft.update
+hello.campaign.draft
 ```
 
 ### Phase 3 — Test actions
 
-Add controlled actions such as:
+Example:
 
 ```text
-send_hello_campaign_test
+hello.campaign.test
 ```
 
-### Phase 4 — Explicit publishing/sending
+### Phase 4 — Explicit high-risk actions
 
 Separate permissions for:
 
 ```text
-publish_story
-publish_staticpage
-send_hello_campaign
+story.publish
+staticpage.publish
+hello.campaign.send
+content.delete
 ```
 
-A generic update call must never implicitly publish content or send a campaign.
-
-### Phase 5 — Broader plugin actions
-
-Expose explicit domain operations from compatible plugins only where stable public interfaces and capability metadata exist.
+A generic update action must never implicitly publish or send.
 
 ---
 
-## 18. Authentication and authorization
+## 10. Authentication and authorization
 
-Authentication and authorization remain separate.
+Credential and authorization enforcement belong primarily to Agent/Geeklog.
 
-Possible credential models:
+Possible models:
 
 - revocable personal access token;
 - service token;
-- OAuth-style authorization;
-- future agent/client credentials.
+- OAuth-style flow;
+- future client/agent credentials.
 
-Every credential should be:
+Credentials should be:
 
 - identifiable;
 - revocable;
 - scoped;
 - optionally expiring;
-- associated with a Geeklog identity or service identity;
-- auditable.
+- associated with a Geeklog/service identity;
+- auditable;
+- isolated by site in multisite deployments.
 
-Authorization concept:
-
-```text
-Allowed operation
-=
-Connector scope
-AND
-Geeklog ACL
-AND
-resource/plugin-specific permission
-```
-
-Connector scopes may only narrow access. They must never expand Geeklog permissions.
+Connector-side credentials must never bypass Agent-side ACL enforcement.
 
 ---
 
-## 19. Risk classes
+## 11. Risk classes
 
 ### Low risk
 
-- search/read public or authorized content;
-- list topics/plugins;
-- read Hub context;
-- read aggregated Hello campaign statistics;
-- read IndexNow status.
+- public/authorized reads;
+- search/list resources;
+- Hub context reads;
+- aggregate statistics/status.
 
 ### Medium risk
 
 - create drafts;
 - update unpublished content;
-- create Hello campaign drafts;
+- create campaign drafts;
 - send administrator tests.
 
 ### High risk
 
 - publish content;
-- send a live newsletter;
+- send live campaigns;
 - delete content;
-- modify subscribers;
-- access subscriber personal data;
-- modify configuration;
-- manage users;
-- install/disable plugins;
+- modify subscribers/users/configuration;
+- access personal data;
 - bulk mutations.
 
-High-risk actions require explicit scopes and strong auditability.
+High-risk actions require explicit scopes, strong auditability and client-side confirmation UX where appropriate.
 
 ---
 
-## 20. Security principles
+## 12. Security principles
 
-Minimum requirements:
+Connector + Agent integration must preserve:
 
-- HTTPS only in production;
-- strict authentication;
-- scoped and revocable credentials;
-- rate limiting;
-- request-size limits;
+- HTTPS in production;
+- strict authentication for non-public capabilities;
+- scoped/revocable credentials;
+- request bounds;
+- rate limits where appropriate;
 - input validation;
 - output filtering;
-- Geeklog ACL enforcement;
-- plugin-specific permission checks;
+- Geeklog ACL;
+- plugin-specific permissions;
 - audit logging;
-- safe error responses;
 - multisite isolation;
-- no arbitrary SQL;
-- no arbitrary PHP execution;
-- no shell execution;
-- no unrestricted filesystem access;
-- no implicit publication or sending;
-- explicit protection of personal subscriber/user data.
+- safe errors;
+- explicit protection of personal data.
 
-Existing `PLG_RET_*` service results can inform normalized external error handling, but public errors should still be filtered and suitable for external clients.
-
-The Connector should expose domain actions, not generic execution primitives.
-
-Do not expose:
+Never expose generic execution primitives such as:
 
 ```text
 run_sql
@@ -1020,13 +403,15 @@ read_any_file
 write_any_file
 ```
 
+Expose domain capabilities only.
+
 ---
 
-## 21. Audit trail
+## 13. Audit trail
 
-Sensitive operations must be attributable.
+Sensitive operations should remain attributable end-to-end.
 
-A useful audit record includes:
+A useful Agent-side audit record includes:
 
 ```text
 timestamp
@@ -1041,179 +426,63 @@ correlation id
 risk class
 ```
 
-For Hello actions, the audit should distinguish clearly between:
-
-```text
-campaign draft created
-campaign test sent
-campaign queued
-campaign live send initiated
-campaign paused/resumed/stopped
-```
+The Connector should preserve/pass a correlation identifier where possible so one client request can be traced through Agent and the owning service/plugin.
 
 ---
 
-## 22. Multisite
+## 14. Multisite
 
-The Connector must follow [`multisite-development-principles.md`](multisite-development-principles.md).
+The Connector must never choose a Geeklog site by accessing shared data directly.
 
-Each request must use the active site's:
+Agent resolves the active site and isolates:
 
 - configuration;
 - database mapping;
+- plugins;
 - permissions;
-- plugin state;
 - credentials;
+- cache;
 - audit context.
 
-Credentials and permissions must never leak across sites sharing plugin files.
-
-Cross-site administration should be explicit and should not arise accidentally from a shared installation.
+Cross-site administration must be explicit and separately authorized.
 
 ---
 
-## 23. Provider independence
+## 15. Provider independence
 
-Although ChatGPT is the first target, the Geeklog-side resource/API layer must remain provider-neutral.
+ChatGPT is only one consumer of Agent.
 
-Possible future consumers:
+The same Agent model should remain reusable by:
 
 ```text
-ChatGPT
+MCP clients
 other AI assistants
-MCP-compatible clients
+REST clients
+OpenAPI-generated clients
 n8n / Make / Zapier-style automation
 mobile applications
-administrative integrations
 trusted custom clients
 ```
 
-ChatGPT-specific schemas and UX belong in the external connector adapter.
+Only ChatGPT-specific tool mapping and UX belong in this Connector.
 
 ---
 
-## 24. Relationship with future Data and Events APIs
+## 16. Implementation sequence
 
-The Connector should be considered an adapter over shared Geeklog architecture.
-
-Short term:
-
-```text
-existing Plugin API
-+ PLG_wsEnabled
-+ PLG_invokeService
-+ AtomPub introspection concepts
-+ compatibility adapters
-        ↓
-capability/service discovery layer
-        ↓
-external JSON resource layer
-        ↓
-Connector
-```
-
-Long term:
-
-```text
-common Geeklog Data API
-+ common Geeklog Events
-+ shared capability descriptions
-        ↓
-REST / JSON / OpenAPI / agent adapters
-        ↓
-Connector
-```
-
-The Connector should become thinner as Geeklog's shared resource layer improves.
-
----
-
-## 25. Relationship with future Marketing
-
-Hello currently owns newsletter delivery and registered-user communication.
-
-A future Marketing plugin may later own:
-
-- consent projections;
-- segmentation;
-- tags;
-- scoring;
-- attribution;
-- automation rules.
-
-The Connector must keep those responsibilities separate.
-
-Possible future flow:
-
-```text
-Marketing chooses/defines segment
-        ↓
-Hello delivers campaign
-        ↓
-Connector exposes authorized operations
-        ↓
-ChatGPT assists with analysis/copy
-```
-
-Hello must not be replaced prematurely by speculative Marketing features.
-
----
-
-## 26. Proof-of-concept success criteria
-
-The first useful milestone is achieved when ChatGPT can securely:
-
-1. identify the Geeklog site and available effective capabilities;
-2. detect and reuse existing Geeklog service support;
-3. search and retrieve stories/static pages;
-4. retrieve Hub context when Hub is installed;
-5. read non-sensitive Hello campaign statistics when Hello is installed;
-6. read IndexNow status when available;
-7. respect Geeklog ACL and Connector scopes;
-8. operate safely in multisite context;
-9. do all of the above without direct SQL access to another plugin's tables;
-10. distinguish implemented services from externally authorized capabilities.
-
----
-
-## 27. Recommended implementation sequence
-
-1. Build a precise inventory of Geeklog 2.1.1 and 2.2.2 webservice/service behavior: `PLG_wsEnabled()`, `PLG_invokeService()`, AtomPub introspection and standard service actions.
-2. Define a normalized internal capability model that can represent inferred Plugin API support and service-backed actions.
-3. Implement capability inference from existing callbacks before requiring any new plugin declaration.
-4. Prototype discovery of current service-enabled Stories and Static Pages.
-5. Evaluate a shared `capabilities`/service-description action through `PLG_invokeService()`.
-6. Introduce a new generic `plugin_getcapabilities_*()` convention only if the service-description approach proves insufficient or awkward.
-7. Define the smallest provider-neutral external JSON resource layer.
-8. Define authentication, token storage, scopes and audit model.
-9. Ensure the capability endpoint returns only the effective authorized capability set.
-10. Expose Hub read services without duplicating Hub logic.
-11. Expose Hello aggregate campaign/status services without exposing personal data by default.
-12. Expose IndexNow status/service operations.
-13. Generate or map Connector tools from shared capability metadata where practical.
-14. Build the ChatGPT connector adapter.
-15. Test Geeklog 2.1.1 and 2.2.2 compatibility where practical.
-16. Perform a security review.
-17. Add draft/update actions.
-18. Add test actions.
-19. Add explicit publication/live-send actions only after the permission model is proven.
-
----
-
-## 28. Key architectural decision still open
-
-The investigation narrows the main design decision to this question:
-
-> **Should richer capability metadata be exposed as a reserved Geeklog service through the existing `PLG_invokeService()` architecture, or does Geeklog need a new generic `plugin_getcapabilities_*()` callback?**
-
-The default preference is to reuse and extend the existing service architecture first.
-
-A new Plugin API callback should be proposed only if it produces a clearly simpler, safer or more reusable contract.
-
-Either way, the result must remain provider-neutral and reusable by Hub, administration tools, REST/OpenAPI generation and future agent adapters.
+1. Stabilize Agent read-only resources/capability model.
+2. Define the Connector-to-Agent authentication model for the first deployment.
+3. Map Agent capability descriptors to ChatGPT tool schemas.
+4. Implement site/capability discovery.
+5. Implement content read/search/list operations.
+6. Implement optional Hub context tools through Agent.
+7. Validate multisite isolation.
+8. Perform security review.
+9. Add scoped draft/test actions only after Agent write/security model is proven.
+10. Add high-risk publish/send/delete actions only after explicit permissions, auditing and confirmation flows are proven.
 
 ---
 
 ## Project rule
 
-> **The Connector is a secure external adapter over Geeklog capabilities. It must reuse existing Geeklog Plugin and Service APIs before adding new contracts, reuse Hub for relationships, Hello for communication, IndexNow for indexing transport, and expose only authorized capabilities. It must not create a competing internal API model for each plugin or consumer.**
+> **The ChatGPT Connector is a thin client/provider adapter over Agent. Agent is the Geeklog-side machine access layer. Hub remains the context/relationship layer. Content plugins remain authoritative for their own data and business rules.**
