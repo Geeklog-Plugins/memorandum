@@ -523,6 +523,27 @@ Geeklog services should be added when another plugin genuinely needs a specializ
 
 Services should not be introduced merely to duplicate `plugin_getiteminfo_*()`.
 
+### Exact source-field inspection and controlled mutation
+
+Some consumers need the exact stored/editorial source rather than a normalized Item Info representation. Examples include historical-autotag audits, content migration tools, language audits and controlled refactoring.
+
+That need must remain distinct from ordinary `content.read`.
+
+Plugins that support such workflows should follow the shared source-field contract in:
+
+[`plugin-source-field-audit-mutation-contract.md`](plugin-source-field-audit-mutation-contract.md)
+
+Key rules:
+
+- expose exact source fields only through an explicit capability;
+- keep read and write capabilities separate;
+- expose stable provider-owned field identifiers instead of SQL column names;
+- keep permissions, validation, save logic, lifecycle notifications and cache invalidation inside the owning plugin;
+- do not require consumers such as AdSense to read or update private plugin tables;
+- support bounded collection/audit access for large installations where practical.
+
+The initial reference consumer is AdSense, which needs to find and optionally remove historical tags such as `[adsense:1]` and `[leaderboard:1]` without rewriting unrelated content.
+
 ---
 
 # 8. Recommended implementation priorities
