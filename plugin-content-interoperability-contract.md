@@ -346,7 +346,101 @@ Consumers should treat `plugin_idtourl_*()` as an additional capability and fall
 
 ---
 
-# 6. Keep What's New as a presentation capability
+# 6. Expose a generic public item extension point with `PLG_itemDisplay()`
+
+For addressable content that has a normal full public view, modernized plugins should expose a stable extension point by calling Geeklog's existing:
+
+```php
+PLG_itemDisplay($id, $type)
+```
+
+This dispatcher exists in **Geeklog 2.1.1 and Geeklog 2.2.2**, so it can be used across the current transition compatibility range without introducing a Hub-specific API or a separate 2.1.1 fallback.
+
+Geeklog calls every active:
+
+```php
+plugin_itemdisplay_PLUGIN($id, $type)
+```
+
+implementation and returns the successful display fragments to the content owner. The owning plugin should render those fragments at a stable location on the **full public item page**, normally after the main item content and before secondary UI such as comments, navigation or administrative actions.
+
+Conceptually:
+
+```text
+provider-owned item content
+        ↓
+PLG_itemDisplay($id, $type)
+        ↓
+third-party contextual fragments
+        ↓
+comments / secondary actions
+```
+
+Example:
+
+```php
+$extensions = PLG_itemDisplay($itemId, 'videos');
+
+foreach ($extensions as $extensionHtml) {
+    $content .= $extensionHtml;
+}
+```
+
+The exact integration should fit the provider's template/rendering architecture; the important rule is that the provider owns the placement while third-party plugins contribute through Geeklog's generic dispatcher.
+
+## Why this matters
+
+This enables reusable cross-plugin presentation without coupling the provider to a specific consumer.
+
+For example, Videos should not know that Hub exists. Videos only reports that it is displaying `videos:<id>`. Hub may then implement:
+
+```php
+function plugin_itemdisplay_hub($id, $type)
+{
+    // Return contextual Hub markup when this item belongs to a pillar.
+}
+```
+
+The same extension point can be reused by other plugins later.
+
+Recommended uses include:
+
+- Hub pillar backlinks;
+- contextual relationship/navigation fragments;
+- provider-independent annotations or related presentation supplied by another plugin;
+- future integrations that need a safe server-rendered placement point.
+
+## Provider rules
+
+A content plugin implementing this placement should:
+
+- call `PLG_itemDisplay()` only for the normal **full item view**, not for every list/card/search result;
+- pass the stable content identity used by its Item Info contract;
+- render returned fragments server-side at a predictable location;
+- keep the provider responsible for its own page layout, permissions and primary content;
+- remain fully functional when no extension fragment is returned;
+- avoid Hub-specific callbacks, direct Hub table access, DOM injection or JavaScript-only insertion;
+- avoid querying another plugin's private tables to construct the extension content.
+
+This is a **generic Geeklog interoperability point**, not a requirement to depend on Hub.
+
+## Identity and subtype caution
+
+The current dispatcher signature is:
+
+```php
+PLG_itemDisplay($id, $type)
+```
+
+It does not carry a separate `sub_type`.
+
+Providers exposing several independently addressable object families must therefore ensure that the `type + id` pair passed to the dispatcher identifies the displayed object unambiguously, or document a provider-neutral identity convention before relying on this hook for subtype-specific relationships.
+
+This matters especially for plugins such as Maps where maps and markers may both become first-class content objects. Hub and other consumers should not invent provider-private identifiers merely to work around an ambiguous public identity.
+
+---
+
+# 7. Keep What's New as a presentation capability
 
 Plugins whose content belongs in Geeklog's native **What's New** block may also implement:
 
@@ -382,7 +476,7 @@ What's New can reuse the same underlying plugin query logic while remaining resp
 
 ---
 
-# 7. Optional and distribution capabilities
+# 8. Optional and distribution capabilities
 
 Once the core interoperability layer is stable, plugins may add additional capabilities according to their role.
 
@@ -548,7 +642,7 @@ The initial reference consumer is AdSense, which needs to find and optionally re
 
 ---
 
-# 8. Recommended implementation priorities
+# 9. Recommended implementation priorities
 
 | Priority | Capability | Purpose |
 | --- | --- | --- |
@@ -558,6 +652,7 @@ The initial reference consumer is AdSense, which needs to find and optionally re
 | **P1** | `PLG_itemSaved()` | Signal create/update lifecycle changes |
 | **P1** | `PLG_itemDeleted()` | Signal deletions |
 | **P2** | optional `hits` field + `hits-desc` ordering | Expose per-item popularity to dashboards and other structured consumers when the plugin tracks views |
+| **P2** | public `PLG_itemDisplay($id, $type)` placement | Allow generic server-rendered contextual fragments on full item views |
 | **P2** | `plugin_idtourl_PLUGIN()` | Resolve canonical item URLs where supported |
 | **P2** | `plugin_collectSitemapItems_PLUGIN()` | Provide optimized/native XML Sitemap collection where useful |
 | **P2/P3** | `plugin_getfeednames_PLUGIN()` + `plugin_getfeedcontent_PLUGIN()` | Participate in Content Syndication when the content type is feed-worthy |
@@ -571,7 +666,7 @@ For the next modernization work on **Maps, Documents, Videos, Store**, and simil
 
 ---
 
-# 9. Example target for Maps
+# 10. Example target for Maps
 
 A Maps modernization should aim to expose at least:
 
@@ -659,7 +754,7 @@ The same pattern can then be applied to Documents, Videos, Store, and other addr
 
 ---
 
-# 10. Consumer responsibilities
+# 11. Consumer responsibilities
 
 The contract also places requirements on consumers.
 
