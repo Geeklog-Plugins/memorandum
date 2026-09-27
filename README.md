@@ -239,7 +239,8 @@ The recommended baseline is:
 - common collection options such as `since`, `limit`, and `order` where applicable;
 - `PLG_itemSaved()` on successful creations and updates;
 - `PLG_itemDeleted()` on successful deletions;
-- `plugin_idtourl_PLUGIN()` where supported, with Item Info URL fallback for older Geeklog versions.
+- `plugin_idtourl_PLUGIN()` where supported, with Item Info URL fallback for older Geeklog versions;
+- a full-item public rendering extension point through `PLG_itemDisplay($id, $type)` so other plugins can contribute contextual server-rendered fragments without provider-specific coupling.
 
 This baseline is intended to make the same plugin content reusable by Hello, Hub, IndexNow, Sitemap and future consumers without introducing a separate API for each integration.
 
