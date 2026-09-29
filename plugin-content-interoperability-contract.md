@@ -98,6 +98,100 @@ The plugin remains responsible for:
 
 The consumer receives only the normalized information it requested.
 
+## Addressable public resources are not limited to leaf items
+
+An Item Info content provider may expose any **stable public addressable resource** that it owns, not only terminal/leaf content.
+
+Examples include:
+
+```text
+root / catalogue page
+category
+album
+forum
+channel
+map
+marker
+topic
+product
+classified
+contact form landing page
+terminal content item
+```
+
+A resource is appropriate for the content contract when it has a stable provider-owned identity, a meaningful public URL, and permission-aware visibility.
+
+Consumers must therefore not assume that every Item Info record is a leaf item.
+
+Recommended normalized fields for addressable resources are:
+
+```text
+id
+title
+url
+type
+subtype
+is-container
+parent-id
+parent-subtype
+```
+
+The first three fields remain the practical minimum for discovery. `subtype` is strongly recommended when one provider exposes more than one addressable object family. `is-container`, `parent-id`, and `parent-subtype` are optional additive fields that allow consumers to understand lightweight hierarchy without reading provider tables.
+
+Examples:
+
+```text
+documents:root                 subtype=root       is-container=1
+documents:category:12          subtype=category   is-container=1
+documents:3-airbus-a321-neo    subtype=document   is-container=0
+
+mediagallery:root              subtype=root       is-container=1
+mediagallery:album:45          subtype=album      is-container=1
+mediagallery:media:987         subtype=media      is-container=0
+
+forum:root                     subtype=root       is-container=1
+forum:category:3               subtype=category   is-container=1
+forum:forum:8                  subtype=forum      is-container=1
+forum:topic:123                subtype=topic      is-container=0
+```
+
+### Stable identity when subtype is not transported separately
+
+Some Geeklog APIs, including `PLG_itemDisplay($id, $type)`, do not transport a separate subtype.
+
+When one provider exposes several addressable object families, the provider-owned `id` should therefore remain unambiguous on its own.
+
+Recommended patterns include:
+
+```text
+root
+category:12
+album:45
+forum:8
+topic:123
+channel:UC...
+marker:27
+```
+
+Consumers must not invent these namespaces. The owning provider defines and documents its stable public identities.
+
+### Root/catalogue resources
+
+A plugin with a stable public landing page may expose that page as an addressable resource even when it has no database row.
+
+For example, Contact may expose:
+
+```text
+provider = contact
+id = root
+subtype = contact-form
+title = Contact
+url = /contact/
+is-container = 1
+```
+
+This does not require Contact to become a database-backed editorial content system. It only means the plugin owns a stable public resource that other interoperable consumers can identify.
+
 ---
 
 # 2. Support collection retrieval
@@ -154,7 +248,12 @@ topic
 category
 subtype
 ids
+parent-id
+parent-subtype
+is-container
 ```
+
+When a provider exposes multiple addressable subtypes, collection filtering by `subtype` is recommended so consumers can request only categories, albums, forums, terminal items, or another provider-owned object family without loading the provider's complete public namespace.
 
 These filtering options are **recommended interoperability conventions**, not a claim that current Geeklog core already enforces them.
 
