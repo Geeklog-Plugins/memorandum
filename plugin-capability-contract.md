@@ -120,6 +120,42 @@ Contact       -> service
 
 Roles are descriptive. They must not be converted into mandatory API checklists that penalize a service or presentation component for not exposing content.
 
+### Provider families and the correct contract surface
+
+Consumers such as Agent should distinguish provider families instead of forcing every structured plugin surface into Item Info.
+
+Recommended families are:
+
+```text
+content       stable public addressable resources and collections
+navigation    permission-filtered trees/navigation structures
+relationship contextual relationships and graph data
+service       bounded operations, diagnostics and specialized read surfaces
+```
+
+Typical contract mapping:
+
+```text
+content
+    -> plugin_getiteminfo_PLUGIN()
+    -> plugin_idtourl_PLUGIN()
+    -> plugin_dopluginsearch_PLUGIN() where relevant
+
+navigation
+    -> a versioned provider-owned tree/navigation contract
+       (for example Menu's resolved-tree contract)
+
+relationship
+    -> Hub read-only relationship/context services
+
+service
+    -> PLG_invokeService() or another documented bounded provider-owned service
+```
+
+Do not expose a navigation tree as fake content merely to satisfy Item Info, and do not expose a generic content resource through a service when Item Info already fits naturally.
+
+One plugin may participate in more than one family when it genuinely owns more than one kind of interoperable surface.
+
 ---
 
 ## 4. Resources, capabilities and actions are different
