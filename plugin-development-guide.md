@@ -700,6 +700,42 @@ See:
 - [Plugin content interoperability contract](plugin-content-interoperability-contract.md)
 - [Plugin capability contract](plugin-capability-contract.md)
 
+## Validate against real consumers, not only the written contract
+
+Memorandum compliance is not proven by implementing callbacks whose names and signatures look correct.
+
+When a maintained consumer already exists, test the provider through that consumer's real runtime path.
+
+FAQ is the current reference case for contextual content associations. A provider intended to participate in FAQ associations should be tested for all of the following:
+
+```text
+provider discovery
+    -> plugin_getiteminfo_PLUGIN() exists and is loaded
+
+association picker
+    -> PLG_getItemInfo(PLUGIN, '*', 'id,title,url,subtype,type', ...)
+
+stored association display
+    -> PLG_getItemInfo(PLUGIN, id, 'title', current_user_uid)
+    -> plugin_idtourl_PLUGIN(subtype, id)
+       or PLG_getItemInfo(PLUGIN, id, 'url', current_user_uid)
+
+public contextual rendering
+    -> provider calls PLG_itemDisplay(stable_id, PLUGIN)
+```
+
+Do not declare the provider aligned merely because a direct unit call to `plugin_getiteminfo_PLUGIN()` returns something plausible.
+
+The acceptance test must prove that:
+
+- the dispatcher reaches the callback;
+- the requested field form is supported;
+- permissions are evaluated under the intended UID;
+- the stable ID is the same across collection, resolution, URL and rendering paths;
+- the consumer does not need a provider-specific exception.
+
+See the **FAQ contextual associations reference consumer profile** in [Plugin content interoperability contract](plugin-content-interoperability-contract.md).
+
 ---
 
 # 13. Respect exact API contracts
@@ -1024,6 +1060,8 @@ A plugin should not be called operational until the relevant checks pass.
 ## Interoperability
 
 - [ ] Item Info follows the documented return contract;
+- [ ] provider tested through at least one real maintained consumer when one exists;
+- [ ] FAQ association acceptance profile tested when the plugin is expected to host contextual FAQs;
 - [ ] consumers normalize scalar/positional/associative Item Info forms where compatibility requires it;
 - [ ] administration Item Info lookups use the current user's UID when appropriate;
 - [ ] canonical URLs are provider-owned and resolved without hard-coded consumer routing;
