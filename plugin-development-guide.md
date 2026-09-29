@@ -93,6 +93,41 @@ Common responsibilities:
 
 Keep unconditional bootstrap code in `functions.inc` small. Any fatal error there can break every page on which Geeklog loads the plugin.
 
+## One canonical definition per Plugin API callback
+
+Before adding or moving a callback, search the **entire plugin tree** for an existing implementation.
+
+This is especially important in older plugins where callbacks may be split between files such as:
+
+```text
+functions.inc
+api.inc
+modern.inc
+lib-*.php
+```
+
+A callback such as:
+
+```php
+plugin_getadminoption_PLUGIN()
+plugin_cclabel_PLUGIN()
+plugin_getconfigtooltip_PLUGIN()
+plugin_getiteminfo_PLUGIN()
+plugin_idtourl_PLUGIN()
+```
+
+must have one canonical runtime definition.
+
+Do not "add the modern callback" to a new file until confirming that a historical implementation does not already exist elsewhere. Duplicate definitions commonly produce a site-wide fatal error during plugin bootstrap.
+
+Recommended practice:
+
+1. search the complete source tree for the callback name;
+2. choose the canonical implementation location;
+3. remove or consolidate older duplicates;
+4. ensure the canonical file is loaded in every runtime path that needs the callback;
+5. add a CI/source-contract check for important callbacks when the plugin has a history of duplicate definitions.
+
 ---
 
 # 3. Define database ownership before installation code
@@ -134,6 +169,14 @@ SELECT * FROM {$_TABLES['myplugin_items']}
 Other plugins should not need to know your private table names or column names.
 
 If content must be consumed elsewhere, expose it through Geeklog Plugin APIs or documented provider contracts.
+
+A consumer should not read another third-party plugin's private tables merely because a shared capability is temporarily incomplete. If a compatibility audit must read Geeklog-owned Core tables because Core/Static Pages do not expose an equivalent contract on a supported version, keep that fallback:
+
+- explicitly limited to Geeklog-owned tables;
+- read-only where practical;
+- permission- and language-aware;
+- isolated and documented for later removal;
+- never generalized into arbitrary third-party SQL access.
 
 See [Plugin content interoperability contract](plugin-content-interoperability-contract.md).
 
@@ -277,7 +320,18 @@ Normally this means:
 
 A helper such as `ensureConfig()` can be useful when its behavior is deterministic and idempotent.
 
-See [Configuration migration guide](plugin-configuration-migration-guide-2.2.2.md).
+For technical or consequential settings, consider Geeklog's native contextual help callback:
+
+```php
+plugin_getconfigtooltip_PLUGIN($id)
+```
+
+Keep tooltip text in language files, return an empty string safely for unknown keys, and verify that this callback is defined only once in the plugin.
+
+See:
+
+- [Configuration migration guide](plugin-configuration-migration-guide-2.2.2.md)
+- [Plugin configuration tooltips](plugin-configuration-tooltips.md)
 
 ---
 
@@ -308,6 +362,15 @@ Typical sections may include:
 - maintenance.
 
 Use the repository's shared navigation conventions rather than inventing a different UI for every plugin.
+
+A normal administration area should also be discoverable through Geeklog's native plugin administration surfaces. Where appropriate, implement both:
+
+```php
+plugin_getadminoption_PLUGIN()
+plugin_cclabel_PLUGIN()
+```
+
+The first feeds Geeklog's administration menu; the second feeds Command & Control. Themes and dashboards should consume these native entries rather than hard-code plugin URLs.
 
 See [Plugin admin navigation](plugin-admin-navigation.md).
 
@@ -536,6 +599,69 @@ For full public item pages, content providers should also consider the generic e
 PLG_itemDisplay($id, $type)
 ```
 
+## Addressable resources are not limited to leaf items
+
+A modern content provider may expose stable public resources such as:
+
+```text
+root / catalogue
+category
+album
+forum
+channel
+map
+marker
+topic
+terminal item
+```
+
+Consumers should not need provider-specific SQL or routing knowledge to address those objects.
+
+When one provider exposes several object families:
+
+- expose a stable `subtype` where supported;
+- keep the `id` unambiguous even on APIs that transport only `type + id`;
+- prefer provider-owned IDs such as `category:12`, `album:45`, or `forum:8`;
+- expose `title` and `url` through Item Info;
+- expose canonical URL resolution through `plugin_idtourl_PLUGIN()` where supported;
+- consider optional `is-container`, `parent-id`, and `parent-subtype` fields for lightweight hierarchy.
+
+This keeps the same resource usable on Geeklog 2.1.1 while allowing Geeklog 2.2.2 to carry richer subtype information.
+
+## Keep provider families distinct
+
+Not every structured plugin surface is content.
+
+Use the shared capability/provider-family distinction:
+
+```text
+content       -> addressable resources / Item Info
+navigation    -> permission-filtered tree contracts
+relationship  -> Hub/context services
+service       -> bounded specialized services
+```
+
+Do not force navigation trees, diagnostics or service responses into Item Info merely so one consumer can read them.
+
+## Consumer rule: never hard-code another plugin's routing
+
+A consumer such as FAQ, Hub, Agent, Hello or IndexNow should not contain logic such as:
+
+```php
+if ($provider === 'documents') { ... }
+if ($provider === 'maps') { ... }
+```
+
+to derive another plugin's title or public URL.
+
+Prefer, in order:
+
+1. provider-owned canonical URL resolution such as `plugin_idtourl_PLUGIN()` where available;
+2. Item Info fields such as `title` and `url`;
+3. a documented compatibility fallback only for Core/legacy surfaces that do not yet expose the shared contract.
+
+Third-party plugin tables and private routing rules must remain private.
+
 See:
 
 - [Plugin API reference](plugin-api-reference-2.2.2.md)
@@ -565,6 +691,26 @@ When implementing a callback:
 1. verify the Plugin API reference;
 2. inspect existing working core/plugin implementations when necessary;
 3. test the callback through Geeklog, not only by calling your function directly.
+
+## Normalize historical Item Info return shapes at consumer boundaries
+
+Across older and modernized plugins, a concrete Item Info request may be encountered as:
+
+- a scalar for one requested field;
+- a positional/numeric array;
+- an associative array.
+
+A generic consumer should normalize these forms in one shared helper instead of adding provider-specific exceptions.
+
+When retrieving several fields, preserve the requested field order when mapping a positional result.
+
+## Use the correct permission context
+
+The `$uid` passed to `PLG_getItemInfo()` is part of the permission contract.
+
+Do not automatically use anonymous UID `0` from an authenticated administration page. When an administrator is selecting or inspecting provider content, use the current authenticated user's UID unless the operation intentionally audits public/anonymous visibility.
+
+Conversely, public machine/discovery endpoints should use the visibility context they actually promise and must not leak administrator-only content.
 
 ---
 
@@ -798,6 +944,14 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] missing configuration does not cause bootstrap fatal errors;
 - [ ] configuration migration is idempotent.
 
+## Callback/bootstrap integrity
+
+- [ ] complete source tree searched before adding/moving Plugin API callbacks;
+- [ ] each important Plugin API callback has one canonical definition;
+- [ ] canonical callback files are loaded on the required runtime paths;
+- [ ] duplicate callback definitions are guarded by CI/source-contract tests where useful;
+- [ ] disabled plugin does not leave callable public/admin behavior unintentionally active.
+
 ## Administration
 
 - [ ] administration entry point checks ACL;
@@ -805,6 +959,8 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] inputs validated;
 - [ ] output escaped;
 - [ ] local navigation coherent;
+- [ ] native administration entry exposed with `plugin_getadminoption_PLUGIN()` when applicable;
+- [ ] Command & Control entry exposed with `plugin_cclabel_PLUGIN()` when applicable;
 - [ ] Configuration reachable when applicable;
 - [ ] substantial UI uses templates/assets.
 
@@ -829,6 +985,17 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] assets loaded on `/plugin/index.php` when applicable;
 - [ ] cache-busting/versioning strategy present;
 - [ ] no theme-specific dependency unless optional/documented.
+
+## Interoperability
+
+- [ ] Item Info follows the documented return contract;
+- [ ] consumers normalize scalar/positional/associative Item Info forms where compatibility requires it;
+- [ ] administration Item Info lookups use the current user's UID when appropriate;
+- [ ] canonical URLs are provider-owned and resolved without hard-coded consumer routing;
+- [ ] stable IDs remain unambiguous when several subtypes share one provider;
+- [ ] addressable containers/root/category/album/forum resources are exposed when useful;
+- [ ] provider-family role (content/navigation/relationship/service) is explicit where applicable;
+- [ ] third-party private SQL is not used as a shortcut around missing contracts.
 
 ## Content lifecycle
 
@@ -901,6 +1068,34 @@ These mistakes are especially expensive because they often produce a plugin that
 ```text
 ❌ assume 'footercode' in COM_createHTMLDocument() replaces Plugin API asset hooks
 ✅ use the appropriate Geeklog script/CSS APIs or plugin_getfootercode_PLUGIN()
+```
+
+## Duplicate Plugin API callbacks
+
+```text
+❌ add plugin_getadminoption_PLUGIN() or another callback to a new file without searching the old code
+✅ search the complete tree, keep one canonical definition, and guard it in CI when appropriate
+```
+
+## Wrong Item Info permission context
+
+```text
+❌ use uid=0 in administration and conclude that a provider has no title/content
+✅ use the current authenticated UID for administration lookups unless public visibility is intentionally being audited
+```
+
+## Hard-coded provider routing in a consumer
+
+```text
+❌ teach FAQ/Hub/Agent how Documents, Maps, Videos, etc. build URLs
+✅ ask the provider through plugin_idtourl_*() and/or Item Info url/title fields
+```
+
+## Ambiguous IDs for multi-subtype providers
+
+```text
+❌ reuse numeric id "8" for both forum 8 and category 8 when APIs may carry only type + id
+✅ expose stable provider-owned IDs such as forum:8 and category:8, plus subtype when supported
 ```
 
 ## Wrong callback data shape
@@ -1035,6 +1230,7 @@ Use this guide as the starting point, then move to the detailed references when 
 | --- | --- |
 | Existing Plugin API callbacks | [plugin-api-reference-2.2.2.md](plugin-api-reference-2.2.2.md) |
 | Configuration and existing-install migration | [plugin-configuration-migration-guide-2.2.2.md](plugin-configuration-migration-guide-2.2.2.md) |
+| Configuration contextual help/tooltips | [plugin-configuration-tooltips.md](plugin-configuration-tooltips.md) |
 | Admin menus and local section navigation | [plugin-admin-navigation.md](plugin-admin-navigation.md) |
 | Persistent files | [plugin-persistent-storage-guide.md](plugin-persistent-storage-guide.md) |
 | Multisite constraints | [multisite-development-principles.md](multisite-development-principles.md) |
