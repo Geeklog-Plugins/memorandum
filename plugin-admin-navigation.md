@@ -14,16 +14,38 @@ This document defines a small theme-neutral convention for that remaining case.
 
 ### 1. Global plugin administration entry
 
-Use the normal Plugin API hook:
+When a plugin has an administration area that should appear in Geeklog's plugin administration list, it should expose the native administration entry expected by Geeklog through:
 
 ```php
 function plugin_getadminoption_myplugin()
 {
-    // Return the plugin label and administration URL.
+    global $_CONF;
+
+    if (!SEC_hasRights('myplugin.admin')) {
+        return array();
+    }
+
+    return array(
+        'My Plugin',
+        $_CONF['site_admin_url'] . '/plugins/myplugin/index.php',
+        ''
+    );
 }
 ```
 
-This integrates the plugin into Geeklog's global administration navigation. It is not intended to represent every internal administration section of a plugin.
+The conventional return values are:
+
+1. administration label;
+2. administration URL;
+3. optional item/submission count or an empty value.
+
+This hook integrates the plugin into Geeklog's global administration navigation and allows themes or administration dashboards to discover the plugin without maintaining plugin-specific URL registries.
+
+A plugin that has a real administration area should not rely on Eclipse, Denim, Hub or another consumer to invent or hard-code its administration URL. When the entry is relevant, expose `plugin_getadminoption_<plugin>()` and let Geeklog own discovery.
+
+The hook should enforce the plugin's normal administration ACL and return an empty array when the current user is not authorized.
+
+It is not intended to represent every internal administration section of a plugin; those sections remain plugin-local navigation.
 
 ### 2. Page action menus
 
@@ -215,7 +237,7 @@ See `plugin-configuration-migration-guide-2.2.2.md` and `plugin-configuration-to
 
 Before creating plugin-local navigation, use this decision order:
 
-1. **One global plugin entry needed?** Use `plugin_getadminoption_<plugin>()`.
+1. **Does the plugin expose an administration area that should be discoverable by Geeklog?** Implement `plugin_getadminoption_<plugin>()`.
 2. **A small set of page actions?** Use `ADMIN_createMenu()`.
 3. **A persistent set of peer plugin sections with active state or POST items?** Use the `plugin-admin-nav*` convention.
 4. Do not use a theme-framework class as the interoperability contract.
