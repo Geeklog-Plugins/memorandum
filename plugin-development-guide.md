@@ -1,6 +1,6 @@
 # Geeklog Plugin Development Guide
 
-A practical, end-to-end guide for building a Geeklog plugin that is installable, configurable, administrable, publicly usable, upgradeable, packageable, and compatible with the current modernization baseline.
+A practical, end-to-end guide for building a Geeklog plugin that is installable, activatable, deactivatable, configurable, administrable, publicly usable, upgradeable, packageable, and compliant with the current Memorandum development expectations.
 
 This document is intentionally **transversal**. The repository already contains detailed references for individual topics such as the Plugin API, configuration migration, administration navigation, persistent storage, multisite behavior, shared-file upgrades, and interoperability. This guide explains **in which order those pieces should be assembled** to produce an operational plugin.
 
@@ -191,7 +191,52 @@ Where practical, initialization and migration helpers should be idempotent:
 
 ---
 
-# 5. Add configuration using Geeklog Configuration
+# 5. Make activation and deactivation safe
+
+Installation, activation, deactivation, and uninstallation are different lifecycle states and must not be conflated.
+
+A plugin should support:
+
+```text
+installed + enabled
+installed + disabled
+uninstalled
+```
+
+Disabling a plugin must **not** destroy its data, configuration, tables, files, or upgrade state.
+
+When disabled:
+
+- public functionality must no longer be exposed through normal Geeklog plugin dispatch;
+- administration/menu integration should disappear according to Geeklog behavior;
+- scheduled or indirect plugin work must not continue merely because files still exist;
+- direct access to plugin PHP entry points must fail safely when the plugin is inactive;
+- plugin-owned persistent data must remain intact for later reactivation.
+
+When re-enabled:
+
+- the plugin should resume from its previous persisted state;
+- it must not recreate duplicate groups, features, configuration entries, blocks, or tables;
+- it must not silently reset administrator configuration;
+- it must not require reinstalling merely because it was disabled;
+- it should detect when the installed persisted version requires an upgrade before normal operation continues.
+
+Activation/deactivation tests should include:
+
+1. install and configure;
+2. create representative data;
+3. disable the plugin;
+4. verify public/admin integrations are unavailable as expected;
+5. verify persisted data remains intact;
+6. re-enable the plugin;
+7. verify configuration and content are preserved;
+8. verify normal operation resumes without duplicate initialization.
+
+A plugin that can only be installed and uninstalled, but cannot survive disable/re-enable cleanly, is not lifecycle-complete.
+
+---
+
+# 6. Add configuration using Geeklog Configuration
 
 If a value belongs to site administration, use Geeklog's Configuration API rather than inventing an unrelated settings store.
 
@@ -236,7 +281,7 @@ See [Configuration migration guide](plugin-configuration-migration-guide-2.2.2.m
 
 ---
 
-# 6. Build administration as a protected application surface
+# 7. Build administration as a protected application surface
 
 The administration page should not rely on the invisibility of a menu link for security.
 
@@ -284,7 +329,7 @@ This improves maintainability and theme compatibility.
 
 ---
 
-# 7. Make the public entry point work early
+# 8. Make the public entry point work early
 
 Do not postpone public integration until the end.
 
@@ -325,7 +370,7 @@ Do not expose mutations or private data merely because a PHP file remains addres
 
 ---
 
-# 8. Add blocks only when they have a real user role
+# 9. Add blocks only when they have a real user role
 
 If the plugin provides reusable dynamic blocks, expose them through Geeklog's block integration rather than hardcoding theme-specific widgets.
 
@@ -354,7 +399,7 @@ A block should have a meaningful purpose such as:
 
 ---
 
-# 9. Load CSS and JavaScript through the plugin lifecycle
+# 10. Load CSS and JavaScript through the plugin lifecycle
 
 Keep CSS and JavaScript in dedicated files and register them through compatible Geeklog mechanisms.
 
@@ -383,22 +428,35 @@ while the site actually exposes:
 
 Asset/page detection must correctly handle both forms when both are valid.
 
-## Version plugin assets
+## Version CSS and JavaScript assets
 
-Browsers cache CSS and JavaScript aggressively.
+Browsers cache CSS and JavaScript aggressively. Plugin CSS and JavaScript files should therefore be **versioned in their public URL**.
 
-A useful cache-busting convention is to derive a version from:
+A recommended convention is to derive the asset version from:
 
-- plugin version;
-- and, where appropriate, `filemtime()`.
+- the plugin version;
+- and, where useful, `filemtime()` for the actual file.
 
-The goal is that a deployed asset change becomes visible without forcing users to manually clear browser caches.
+Example concept:
 
-Do not solve stale assets with random query strings on every request.
+```text
+plugin.css?v=1.4.0-1727600000
+plugin.js?v=1.4.0-1727600000
+```
+
+Requirements:
+
+- CSS and JS changes must invalidate the browser cache after deployment;
+- the version must change deterministically when the shipped asset changes;
+- do not rely on users clearing browser cache manually;
+- do not use random query strings on every request;
+- do not leave static, unversioned asset URLs when the file is expected to change across plugin releases.
+
+This applies to both public and administration assets.
 
 ---
 
-# 10. Implement CRUD with validation, ACL, and lifecycle behavior
+# 11. Implement CRUD with validation, ACL, and lifecycle behavior
 
 For create/update/delete operations:
 
@@ -423,7 +481,7 @@ These events allow consumers to react without reading private plugin tables.
 
 ---
 
-# 11. Add Geeklog integrations deliberately
+# 12. Add Geeklog integrations deliberately
 
 Once the plugin's core lifecycle works, decide which native integrations make sense.
 
@@ -486,7 +544,7 @@ See:
 
 ---
 
-# 12. Respect exact API contracts
+# 13. Respect exact API contracts
 
 Do not infer a callback's return format from its name.
 
@@ -510,7 +568,7 @@ When implementing a callback:
 
 ---
 
-# 13. Store persistent data outside disposable cache
+# 14. Store persistent data outside disposable cache
 
 Do not place uploads or plugin-owned persistent data in Geeklog cache directories.
 
@@ -531,7 +589,7 @@ See [Plugin persistent storage guide](plugin-persistent-storage-guide.md).
 
 ---
 
-# 14. Treat multisite as a constraint from day one
+# 15. Treat multisite as a constraint from day one
 
 Even when the plugin is not a multisite-management plugin, persistent state should have a clear site context.
 
@@ -557,7 +615,7 @@ See:
 
 ---
 
-# 15. Build upgrades as first-class code
+# 16. Build upgrades as first-class code
 
 Every released state creates a possible upgrade starting point.
 
@@ -589,9 +647,48 @@ If the persisted state must change, the plugin needs a recognizable upgrade boun
 
 Do not silently add a required database/configuration change while leaving the released plugin version unchanged.
 
+## Upgrade must be a supported lifecycle path
+
+A plugin should not merely contain migration snippets. It should provide a coherent upgrade path from supported released versions.
+
+The upgrade path should:
+
+- determine the currently installed plugin version;
+- apply required migrations in order;
+- update database schema safely;
+- add or transform configuration without resetting user choices;
+- add new groups/features/permissions where required;
+- migrate persistent files when required;
+- update plugin metadata/version state only after the relevant migration succeeds;
+- stop safely and report a useful error when a migration cannot complete;
+- remain safe when the same code files are shared by several sites at different persisted versions.
+
+Where Geeklog exposes a native plugin upgrade mechanism or callback for the supported release, use that lifecycle instead of inventing an unrelated upgrade endpoint.
+
+After an upgrade, test both:
+
+- the upgraded installation;
+- a clean installation of the same new version.
+
+They must converge on an equivalent supported state.
+
+## Upgrade matrix
+
+For each release, record which previous versions are directly supported upgrade sources.
+
+At minimum, test the immediately previous released version. When older supported versions can legitimately upgrade directly, include them in the test matrix.
+
+Never assume:
+
+```text
+latest files = latest database/configuration
+```
+
+The plugin must explicitly reconcile code version and persisted state.
+
 ---
 
-# 16. Diagnose blank pages from the bootstrap outward
+# 17. Diagnose blank pages from the bootstrap outward
 
 A blank page is often not a template problem.
 
@@ -615,7 +712,7 @@ A distribution containing a PHP syntax error should never reach `dist/`.
 
 ---
 
-# 17. Package the plugin as an installable artifact
+# 18. Package the plugin as an installable artifact
 
 The development tree is not automatically a valid release archive.
 
@@ -662,7 +759,7 @@ CI should inspect the produced archive and verify:
 
 ---
 
-# 18. Minimum viable plugin checklist
+# 19. Minimum viable plugin checklist
 
 A plugin should not be called operational until the relevant checks pass.
 
@@ -725,6 +822,9 @@ A plugin should not be called operational until the relevant checks pass.
 
 - [ ] CSS separated;
 - [ ] JavaScript separated;
+- [ ] CSS URLs are versioned;
+- [ ] JavaScript URLs are versioned;
+- [ ] asset version changes when the shipped file changes;
 - [ ] assets loaded on `/plugin/`;
 - [ ] assets loaded on `/plugin/index.php` when applicable;
 - [ ] cache-busting/versioning strategy present;
@@ -771,7 +871,7 @@ A plugin should not be called operational until the relevant checks pass.
 
 ---
 
-# 19. Frequent mistakes observed during modernization
+# 20. Frequent mistakes observed during modernization
 
 These mistakes are especially expensive because they often produce a plugin that looks almost complete while one lifecycle step remains broken.
 
@@ -868,7 +968,7 @@ These mistakes are especially expensive because they often produce a plugin that
 
 ---
 
-# 20. Recommended implementation order
+# 21. Recommended implementation order
 
 For a new plugin, the following order catches architectural mistakes early:
 
@@ -901,7 +1001,33 @@ A plugin should become installable, removable, administrable, publicly renderabl
 
 ---
 
-# 21. When to read the specialized documents
+# 22. Memorandum compliance baseline
+
+A modernized plugin should not only work functionally; it should also conform to the development expectations documented in this repository.
+
+Before release, verify the plugin against the relevant Memorandum documents.
+
+At minimum, review:
+
+- Plugin API compatibility;
+- configuration migration;
+- administration navigation;
+- persistent storage;
+- multisite isolation;
+- shared-files upgrade safety;
+- content interoperability where applicable;
+- capability declaration where applicable;
+- metadata manifest expectations;
+- CSS/JS asset versioning;
+- release packaging and upgrade behavior.
+
+The plugin's own README or roadmap should explicitly identify any Memorandum recommendation that is intentionally not implemented and explain why.
+
+A plugin should not claim Memorandum alignment merely because its main feature works.
+
+---
+
+# 23. When to read the specialized documents
 
 Use this guide as the starting point, then move to the detailed references when implementing each subsystem.
 
@@ -935,6 +1061,8 @@ It is finished when its complete lifecycle works:
 
 ```text
 install
+  ↓
+activate / deactivate / reactivate
   ↓
 configure
   ↓
