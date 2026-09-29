@@ -98,6 +98,126 @@ The plugin remains responsible for:
 
 The consumer receives only the normalized information it requested.
 
+## Addressable public resources are not limited to leaf items
+
+An Item Info content provider may expose any **stable public addressable resource** that it owns, not only terminal/leaf content.
+
+Examples include:
+
+```text
+root / catalogue page
+category
+album
+forum
+channel
+map
+marker
+topic
+product
+classified
+contact form landing page
+terminal content item
+```
+
+A resource is appropriate for the content contract when it has a stable provider-owned identity, a meaningful public URL, and permission-aware visibility.
+
+Consumers must therefore not assume that every Item Info record is a leaf item.
+
+Recommended normalized fields for addressable resources are:
+
+```text
+id
+title
+url
+type
+subtype
+is-container
+parent-id
+parent-subtype
+```
+
+The first three fields remain the practical minimum for discovery. `subtype` is strongly recommended when one provider exposes more than one addressable object family. `is-container`, `parent-id`, and `parent-subtype` are optional additive fields that allow consumers to understand lightweight hierarchy without reading provider tables.
+
+Examples:
+
+```text
+documents:root                 subtype=root       is-container=1
+documents:category:12          subtype=category   is-container=1
+documents:3-airbus-a321-neo    subtype=document   is-container=0
+
+mediagallery:root              subtype=root       is-container=1
+mediagallery:album:45          subtype=album      is-container=1
+mediagallery:media:987         subtype=media      is-container=0
+
+forum:root                     subtype=root       is-container=1
+forum:category:3               subtype=category   is-container=1
+forum:forum:8                  subtype=forum      is-container=1
+forum:topic:123                subtype=topic      is-container=0
+```
+
+### Stable identity when subtype is not transported separately
+
+Some Geeklog APIs, including `PLG_itemDisplay($id, $type)`, do not transport a separate subtype.
+
+When one provider exposes several addressable object families, the provider-owned `id` should therefore remain unambiguous on its own.
+
+Recommended patterns include:
+
+```text
+root
+category:12
+album:45
+forum:8
+topic:123
+channel:UC...
+marker:27
+```
+
+Consumers must not invent these namespaces. The owning provider defines and documents its stable public identities.
+
+### Addressable means URL-addressable
+
+A resource exposed through Item Info should correspond to a public state that can be reached again from its provider-owned URL.
+
+Do not expose a container or filtered view as a stable content resource when its identity depends only on transient request state such as:
+
+```text
+POST-only form state
+cookie-only filters
+session-only navigation state
+temporary UI selections
+```
+
+If a category, catalogue view, album, forum or similar container is meant to be addressable by other plugins, give it a stable canonical GET URL and make the same provider-owned identity resolve back to that URL.
+
+For example:
+
+```text
+id = category:12
+url = /classifieds/index.php?catid=12
+```
+
+is interoperable, while a category that exists only because the browser previously submitted a form or retained a cookie is not a stable cross-plugin resource.
+
+This matters especially for stored relationships. A consumer may persist `provider + item_id` for months or years; resolving that identity later must not depend on invisible browser state from the original request.
+
+### Root/catalogue resources
+
+A plugin with a stable public landing page may expose that page as an addressable resource even when it has no database row.
+
+For example, Contact may expose:
+
+```text
+provider = contact
+id = root
+subtype = contact-form
+title = Contact
+url = /contact/
+is-container = 1
+```
+
+This does not require Contact to become a database-backed editorial content system. It only means the plugin owns a stable public resource that other interoperable consumers can identify.
+
 ---
 
 # 2. Support collection retrieval
@@ -154,7 +274,12 @@ topic
 category
 subtype
 ids
+parent-id
+parent-subtype
+is-container
 ```
+
+When a provider exposes multiple addressable subtypes, collection filtering by `subtype` is recommended so consumers can request only categories, albums, forums, terminal items, or another provider-owned object family without loading the provider's complete public namespace.
 
 These filtering options are **recommended interoperability conventions**, not a claim that current Geeklog core already enforces them.
 
@@ -346,7 +471,114 @@ Consumers should treat `plugin_idtourl_*()` as an additional capability and fall
 
 ---
 
-# 6. Keep What's New as a presentation capability
+# 6. Expose a generic public item extension point with `PLG_itemDisplay()`
+
+For addressable content that has a normal full public view, modernized plugins should expose a stable extension point by calling Geeklog's existing:
+
+```php
+PLG_itemDisplay($id, $type)
+```
+
+This dispatcher exists in **Geeklog 2.1.1 and Geeklog 2.2.2**, so it can be used across the current transition compatibility range without introducing a Hub-specific API or a separate 2.1.1 fallback.
+
+Geeklog calls every active:
+
+```php
+plugin_itemdisplay_PLUGIN($id, $type)
+```
+
+implementation and returns the successful display fragments to the content owner. The owning plugin should render those fragments at a stable location on the **full public item page**, normally after the main item content and before secondary UI such as comments, navigation or administrative actions.
+
+Conceptually:
+
+```text
+provider-owned item content
+        ↓
+PLG_itemDisplay($id, $type)
+        ↓
+third-party contextual fragments
+        ↓
+comments / secondary actions
+```
+
+Example:
+
+```php
+$extensions = PLG_itemDisplay($itemId, 'videos');
+
+foreach ($extensions as $extensionHtml) {
+    $content .= $extensionHtml;
+}
+```
+
+The exact integration should fit the provider's template/rendering architecture; the important rule is that the provider owns the placement while third-party plugins contribute through Geeklog's generic dispatcher.
+
+## Why this matters
+
+This enables reusable cross-plugin presentation without coupling the provider to a specific consumer.
+
+For example, Videos should not know that Hub exists. Videos only reports that it is displaying `videos:<id>`. Hub may then implement:
+
+```php
+function plugin_itemdisplay_hub($id, $type)
+{
+    // Return contextual Hub markup when this item belongs to a pillar.
+}
+```
+
+The same extension point can be reused by other plugins later.
+
+Recommended uses include:
+
+- Hub pillar backlinks;
+- contextual relationship/navigation fragments;
+- provider-independent annotations or related presentation supplied by another plugin;
+- future integrations that need a safe server-rendered placement point.
+
+A full public resource view may be a leaf item or a container. For example, a provider may legitimately expose one `PLG_itemDisplay()` insertion point on:
+
+```text
+root / catalogue page
+category page
+album page
+forum page
+terminal item page
+```
+
+The important distinction is **full resource view versus repeated presentation**. Call the dispatcher once for the page-level resource being viewed; do not call it for every card, row, thumbnail or search result contained inside that page.
+
+## Provider rules
+
+A content plugin implementing this placement should:
+
+- call `PLG_itemDisplay()` only for the normal **full resource view**, not for every list/card/search result;
+- pass the stable content identity used by its Item Info contract;
+- render returned fragments server-side at a predictable location;
+- keep the provider responsible for its own page layout, permissions and primary content;
+- when a leaf resource depends on a container that has its own ACL or publication state, keep hierarchical visibility consistent across Item Info collection, single-item lookup, URL resolution and the rendered page; a leaf must not become discoverable through one contract while its owning category/container is hidden through another;
+- remain fully functional when no extension fragment is returned;
+- avoid Hub-specific callbacks, direct Hub table access, DOM injection or JavaScript-only insertion;
+- avoid querying another plugin's private tables to construct the extension content.
+
+This is a **generic Geeklog interoperability point**, not a requirement to depend on Hub.
+
+## Identity and subtype caution
+
+The current dispatcher signature is:
+
+```php
+PLG_itemDisplay($id, $type)
+```
+
+It does not carry a separate `sub_type`.
+
+Providers exposing several independently addressable object families must therefore ensure that the `type + id` pair passed to the dispatcher identifies the displayed object unambiguously, or document a provider-neutral identity convention before relying on this hook for subtype-specific relationships.
+
+This matters especially for plugins such as Maps where maps and markers may both become first-class content objects. Hub and other consumers should not invent provider-private identifiers merely to work around an ambiguous public identity.
+
+---
+
+# 7. Keep What's New as a presentation capability
 
 Plugins whose content belongs in Geeklog's native **What's New** block may also implement:
 
@@ -382,7 +614,7 @@ What's New can reuse the same underlying plugin query logic while remaining resp
 
 ---
 
-# 7. Optional and distribution capabilities
+# 8. Optional and distribution capabilities
 
 Once the core interoperability layer is stable, plugins may add additional capabilities according to their role.
 
@@ -548,7 +780,7 @@ The initial reference consumer is AdSense, which needs to find and optionally re
 
 ---
 
-# 8. Recommended implementation priorities
+# 9. Recommended implementation priorities
 
 | Priority | Capability | Purpose |
 | --- | --- | --- |
@@ -558,6 +790,7 @@ The initial reference consumer is AdSense, which needs to find and optionally re
 | **P1** | `PLG_itemSaved()` | Signal create/update lifecycle changes |
 | **P1** | `PLG_itemDeleted()` | Signal deletions |
 | **P2** | optional `hits` field + `hits-desc` ordering | Expose per-item popularity to dashboards and other structured consumers when the plugin tracks views |
+| **P2** | public `PLG_itemDisplay($id, $type)` placement | Allow generic server-rendered contextual fragments on full item views |
 | **P2** | `plugin_idtourl_PLUGIN()` | Resolve canonical item URLs where supported |
 | **P2** | `plugin_collectSitemapItems_PLUGIN()` | Provide optimized/native XML Sitemap collection where useful |
 | **P2/P3** | `plugin_getfeednames_PLUGIN()` + `plugin_getfeedcontent_PLUGIN()` | Participate in Content Syndication when the content type is feed-worthy |
@@ -571,7 +804,7 @@ For the next modernization work on **Maps, Documents, Videos, Store**, and simil
 
 ---
 
-# 9. Example target for Maps
+# 10. Example target for Maps
 
 A Maps modernization should aim to expose at least:
 
@@ -659,9 +892,168 @@ The same pattern can then be applied to Documents, Videos, Store, and other addr
 
 ---
 
-# 10. Consumer responsibilities
+# 11. Consumer responsibilities
 
 The contract also places requirements on consumers.
+
+## Reference consumer profile: FAQ contextual associations
+
+When modernizing a content plugin that should be selectable by the FAQ plugin, do not stop after implementing a callback that merely resembles the Memorandum contract. Validate the provider against the **actual consumer path** used by FAQ.
+
+FAQ currently consumes provider content in four distinct ways.
+
+### 1. Provider discovery
+
+FAQ discovers a third-party provider only when the plugin is active and exposes:
+
+```php
+plugin_getiteminfo_PLUGIN()
+```
+
+Therefore a capability declaration alone is not enough for FAQ association discovery.
+
+### 2. Selectable content collection
+
+For the administration association picker, FAQ requests:
+
+```php
+PLG_getItemInfo(
+    'PLUGIN',
+    '*',
+    'id,title,url,subtype,type',
+    0,
+    array(
+        'limit' => 100,
+        'order' => 'modified-desc'
+    )
+);
+```
+
+A provider intended to work smoothly with FAQ should therefore verify this exact collection call.
+
+FAQ accepts collection records in either of these forms:
+
+```php
+array(
+    'id'      => 'category:12',
+    'title'   => 'Guides',
+    'url'     => 'https://example.test/documents/category/12',
+    'subtype' => 'category'
+)
+```
+
+or the historical positional shape:
+
+```php
+array(
+    'category:12',
+    'Guides',
+    'https://example.test/documents/category/12'
+)
+```
+
+For associative records, FAQ reads `subtype` first and falls back to `type` when `subtype` is empty.
+
+The practical compatibility target is therefore:
+
+- stable non-empty `id`;
+- useful `title`;
+- public/canonical `url` when available;
+- `subtype` for multi-object providers;
+- permission-aware collection results;
+- safe support for `limit`;
+- graceful handling of the requested `order` even when the provider cannot implement every ordering mode exactly.
+
+### 3. Concrete item title and URL resolution
+
+When displaying stored associations in administration, FAQ resolves the target through the provider rather than reading provider tables.
+
+The resolution order is:
+
+```text
+URL
+    1. plugin_idtourl_PLUGIN($subtype, $item_id)
+    2. PLG_getItemInfo(PLUGIN, item_id, 'url', current_user_uid)
+
+Title
+    1. PLG_getItemInfo(PLUGIN, item_id, 'title', current_user_uid)
+```
+
+For single-field Item Info requests, FAQ deliberately accepts historical provider return shapes:
+
+```text
+scalar
+associative array keyed by field
+numeric array whose first value is the requested field
+```
+
+A provider should still prefer one consistent documented Item Info behavior, but it must be tested through Geeklog's dispatcher rather than only by directly calling the plugin callback.
+
+A provider that works only for a multi-field direct callback test but fails for:
+
+```php
+PLG_getItemInfo('PLUGIN', $id, 'title', $uid);
+PLG_getItemInfo('PLUGIN', $id, 'url', $uid);
+```
+
+is not fully aligned with the current FAQ consumer.
+
+### 4. Public contextual rendering
+
+For automatic contextual FAQ rendering, the content owner must expose the generic Geeklog extension point on the relevant public surface:
+
+```php
+PLG_itemDisplay($stableId, 'PLUGIN')
+```
+
+The provider owns where the returned fragments are inserted.
+
+FAQ does not need to know the provider's template, route, table or page structure. It matches the provider/type and stable item ID stored in the association.
+
+If the provider exposes several public object families, the ID passed to `PLG_itemDisplay()` must remain unambiguous because this dispatcher does not carry a separate subtype.
+
+Examples:
+
+```text
+root
+category:12
+album:45
+forum:8
+topic:123
+marker:27
+```
+
+The same stable ID should be used consistently by:
+
+- Item Info collection;
+- concrete Item Info resolution;
+- `plugin_idtourl_PLUGIN()`;
+- `PLG_itemDisplay()`;
+- lifecycle notifications where applicable.
+
+### FAQ alignment acceptance test
+
+Before declaring a plugin "FAQ interoperable", test the following through a real Geeklog runtime:
+
+```text
+[ ] plugin appears in FAQ Associations provider list
+[ ] FAQ can enumerate its selectable objects without provider-specific SQL
+[ ] each returned object has the expected stable ID
+[ ] title is readable through a single-field Item Info request
+[ ] URL resolves through plugin_idtourl_*() or single-field Item Info
+[ ] subtype is exposed for multi-object providers
+[ ] current-user administration lookup respects permissions
+[ ] an association can be saved and redisplayed with a human-readable linked title
+[ ] the provider calls PLG_itemDisplay() on the intended public page
+[ ] the saved FAQ/category renders on that page
+[ ] the same identity works on Geeklog 2.1.1 without requiring subtype transport
+[ ] Geeklog 2.2.2 may additionally use subtype-aware callbacks without changing the stable ID
+```
+
+This is a **consumer acceptance profile**, not a FAQ-specific API. The provider still implements generic Geeklog/Memorandum contracts. FAQ is simply a concrete reference consumer used to prove that those contracts work end-to-end.
+
+If another consumer such as Hub or Agent exercises a different part of the shared contract, test that consumer's actual call path as well. "The callback exists" is not sufficient interoperability evidence.
+
 
 ## Hello
 

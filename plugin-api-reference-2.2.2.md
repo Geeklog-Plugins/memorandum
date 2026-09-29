@@ -457,6 +457,7 @@ $_CONF['langurl_<plugin>'];
 | Medium | `plugin_searchtypes_<plugin>()` | Search type registration |
 | Medium | `plugin_autotags_<plugin>()` | Cross-content integration |
 | Medium | `plugin_getrelateditems_<plugin>()` | Related-content support |
+| Medium | provider call to `PLG_itemDisplay($id, $type)` on full public item views | Generic server-rendered extension point for contextual fragments from other plugins |
 | Medium | `plugin_getheadercode_<plugin>()` | Header JS/CSS/markup |
 | Medium | `plugin_getfootercode_<plugin>()` | Footer JavaScript or markup |
 | Medium | `plugin_clearcache_<plugin>()` | Proper cache management |

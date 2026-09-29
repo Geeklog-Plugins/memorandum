@@ -21,6 +21,8 @@ The longer-term architecture described in this repository may target Geeklog 2.2
 
 ## How to read this repository
 
+**Starting a new Geeklog plugin? Begin with [`plugin-development-guide.md`](plugin-development-guide.md).** It provides the end-to-end build order from plugin definition, tables and installation through configuration, administration, public pages, upgrades, packaging and common failure modes.
+
 The documents are separated conceptually into four layers.
 
 ### 1. Current Geeklog facts
@@ -52,6 +54,10 @@ Core principles:
 
 Additional conventions:
 
+- [`plugin-admin-navigation.md`](plugin-admin-navigation.md) — native Geeklog admin-menu usage and the shared fallback contract for persistent plugin-local section navigation.
+- [`plugin-admin-ux-guidelines.md`](plugin-admin-ux-guidelines.md) — administration usability, responsive layout, clear workflows, first-use orientation and concise built-in help.
+- [`plugin-public-design-guidelines.md`](plugin-public-design-guidelines.md) — theme-neutral public design, responsive behavior, accessibility, readable content and robust UI states.
+- [`plugin-seo-public-page-guidelines.md`](plugin-seo-public-page-guidelines.md) — page-level SEO baseline for canonical public plugin resources, metadata, semantic HTML, structured data, containers and sitemap participation.
 - [`plugin-persistent-storage-guide.md`](plugin-persistent-storage-guide.md)
 - [`multisite-development-principles.md`](multisite-development-principles.md)
 - [`plugin-shared-files-upgrade-safety.md`](plugin-shared-files-upgrade-safety.md) — required compatibility behavior when several sites share plugin files but upgrade their persisted state at different times.
@@ -126,9 +132,15 @@ Eclipse itself should provide version-aware compatibility layers where Geeklog 2
 
 ## Rendering
 
-For Geeklog versions supporting the modern document rendering path, prefer `COM_createHTMLDocument()` for new or substantially modernized pages.
+For plugins targeting the current transition baseline **Geeklog 2.1.1 through 2.2.2**, use `COM_createHTMLDocument()` for complete-page rendering. It is available in the supported range and is the common rendering path across these versions.
 
-Do not describe legacy rendering functions as universally removed unless that statement has been verified for the exact Geeklog version being targeted. Compatibility code may still be necessary for older supported releases.
+Do not build or retain modernized plugin pages around `COM_siteHeader()` / `COM_siteFooter()`. These legacy functions are not available in Geeklog 2.2.x and can therefore produce fatal errors or completely blank pages when a plugin that still uses them is opened under Geeklog 2.2.2.
+
+When a page works under Geeklog 2.1.1 but becomes blank under Geeklog 2.2.2, audit the rendering path immediately for direct or indirect calls to `COM_siteHeader()` and `COM_siteFooter()` before investigating the plugin's `.thtml` files.
+
+A modernized page should build its content first and render the final document once, for example through `COM_createHTMLDocument($content, $options)`. Keep page content generation separate from document-shell rendering so the same business logic remains compatible with different Geeklog themes.
+
+Do not describe other legacy rendering facilities as removed unless that statement has been verified for the exact Geeklog version being targeted.
 
 ## Assets
 
@@ -160,6 +172,26 @@ Plugin output should remain theme-independent. Eclipse may serve as a modern ref
 
 Eclipse should preserve native compatibility with both the legacy theme expectations of Geeklog 2.1.1 and the newer theme architecture of Geeklog 2.2.2 through explicit compatibility handling rather than separate incompatible editions where practical.
 
+## Blank pages and silent fatal errors
+
+A completely blank page should be treated as a bootstrap/runtime failure until proven otherwise, not as a template problem.
+
+When a plugin page renders no Geeklog header, no Root Debugging message and no useful HTML, diagnose the common execution path first:
+
+- verify the plugin bootstrap files loaded by `lib-common.php`, especially `functions.inc` and any files it requires unconditionally;
+- run `php -l` on every `.php` and `.inc` file included in the distribution, because PHP 8 may reject syntax that older PHP versions accepted;
+- inspect the exact server `error.log` entry produced by the request; do not rely only on the browser response or Geeklog Root Debugging;
+- search for unconditional `die()`, `exit`, direct-inclusion guards and early returns in files loaded globally;
+- distinguish page-specific failures from bootstrap failures by testing both an administrative page and a public page that share the same plugin loader;
+- audit direct array access to optional request, session, configuration and legacy serialized-data keys, since PHP 8 reports undefined offsets/keys that older versions often tolerated;
+- ensure new-install configuration contains every key used during unconditional plugin bootstrap;
+- validate that language arrays required during bootstrap are loaded before use, or provide bootstrap-safe defaults;
+- avoid suppressing the root cause with `@`; suppression may hide the only useful diagnostic on production-like hosts.
+
+A plugin distribution workflow should lint all shipped `.php` and `.inc` files before producing or publishing an installable archive. A build containing a PHP syntax error must fail before the archive reaches `dist/`.
+
+For a blank page affecting several unrelated plugin URLs, start with the shared bootstrap path rather than the page templates. Templates should only be investigated after the common bootstrap, syntax and runtime checks pass.
+
 ## Installation and upgrades
 
 Modernization must preserve existing installations.
@@ -171,6 +203,10 @@ Upgrade routines should be:
 - non-destructive;
 - safe when interrupted;
 - careful not to delete legacy data until migration has been verified.
+
+Modernized plugins should also implement a complete `plugin_autouninstall_PLUGIN()` contract. This is required not only for a normal uninstall, but also so Geeklog can roll back a failed installation cleanly. The auto-uninstall metadata should list every plugin-owned table, group, feature, PHP block and plugin variable that Geeklog must remove. It must be available during the install path as well as the normal plugin lifecycle when required by the target Geeklog versions. A failed installation must not leave groups, features, configuration records or tables that cause the next installation attempt to fail with duplicate-entry errors.
+
+Installation tests should therefore include an intentional failure after groups/features/tables have begun to be created, followed by verification that `PLG_uninstall()` removes the partial state and that a second install succeeds without manual database cleanup.
 
 Configuration defaults for new installations and configuration migration for existing installations are separate concerns and should be tested separately.
 
@@ -209,7 +245,8 @@ The recommended baseline is:
 - common collection options such as `since`, `limit`, and `order` where applicable;
 - `PLG_itemSaved()` on successful creations and updates;
 - `PLG_itemDeleted()` on successful deletions;
-- `plugin_idtourl_PLUGIN()` where supported, with Item Info URL fallback for older Geeklog versions.
+- `plugin_idtourl_PLUGIN()` where supported, with Item Info URL fallback for older Geeklog versions;
+- a full-item public rendering extension point through `PLG_itemDisplay($id, $type)` so other plugins can contribute contextual server-rendered fragments without provider-specific coupling.
 
 This baseline is intended to make the same plugin content reusable by Hello, Hub, IndexNow, Sitemap and future consumers without introducing a separate API for each integration.
 
@@ -219,7 +256,7 @@ See [`plugin-content-interoperability-contract.md`](plugin-content-interoperabil
 
 Modernized plugins should declare reusable capabilities once rather than forcing Agent, Hub, Eclipse, AdSense or another consumer to maintain a plugin-specific registry. Capability declaration is descriptive and must map to existing Geeklog APIs, bounded `PLG_invokeService()` services or documented versioned provider contracts.
 
-Eclipse should act as a presentation consumer: its dashboard should discover and render provider-owned `dashboard.summary` data instead of querying plugin-private tables. Hub should consume the same declarations and also expose its own relationship/context capabilities. Agent should adapt the same provider contracts to machine-readable resources and tools without becoming a required dependency for plugin-to-plugin interoperability.
+Eclipse acts as a presentation consumer: Eclipse 1.2 now discovers active plugin capabilities and renders provider-owned `dashboard.summary` data instead of querying plugin-private tables. Structured provider metrics take precedence over legacy plugin statistics for the same provider, explicit alerts plus conventional `pending` / `drafts` metrics can surface in **Needs attention**, and legacy Geeklog statistics remain a fallback for older plugins. Hub should consume the same declarations and also expose its own relationship/context capabilities. Agent should adapt the same provider contracts to machine-readable resources and tools without becoming a required dependency for plugin-to-plugin interoperability.
 
 See [`plugin-capability-contract.md`](plugin-capability-contract.md).
 
