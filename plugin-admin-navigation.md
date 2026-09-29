@@ -47,7 +47,43 @@ The hook should enforce the plugin's normal administration ACL and return an emp
 
 It is not intended to represent every internal administration section of a plugin; those sections remain plugin-local navigation.
 
-### 2. Page action menus
+### 2. Command & Control entry
+
+Geeklog also has a separate native hook for the **Command & Control** page:
+
+```php
+function plugin_cclabel_myplugin()
+{
+    global $_CONF;
+
+    if (!SEC_hasRights('myplugin.admin')) {
+        return false;
+    }
+
+    return array(
+        'My Plugin',
+        $_CONF['site_admin_url'] . '/plugins/myplugin/index.php',
+        $_CONF['site_url'] . '/myplugin/images/plugin.png'
+    );
+}
+```
+
+The conventional return values are:
+
+1. administration label;
+2. administration URL;
+3. plugin icon URL.
+
+Use `plugin_cclabel_<plugin>()` when the plugin should also be visible in Geeklog's native **Command & Control** interface. Return `false` or an empty result when the current user is not authorized.
+
+`plugin_getadminoption_<plugin>()` and `plugin_cclabel_<plugin>()` are complementary, not interchangeable:
+
+- `plugin_getadminoption_<plugin>()` feeds Geeklog's administration menu;
+- `plugin_cclabel_<plugin>()` feeds the Command & Control page.
+
+A plugin with a normal administration area will often need **both** hooks so that its administration entry remains discoverable across Geeklog's supported administration surfaces and themes. Themes such as Eclipse or Denim must consume these native Geeklog entries rather than hard-code plugin-specific administration links.
+
+### 3. Page action menus
 
 Geeklog Core provides:
 
@@ -237,10 +273,11 @@ See `plugin-configuration-migration-guide-2.2.2.md` and `plugin-configuration-to
 
 Before creating plugin-local navigation, use this decision order:
 
-1. **Does the plugin expose an administration area that should be discoverable by Geeklog?** Implement `plugin_getadminoption_<plugin>()`.
-2. **A small set of page actions?** Use `ADMIN_createMenu()`.
-3. **A persistent set of peer plugin sections with active state or POST items?** Use the `plugin-admin-nav*` convention.
-4. Do not use a theme-framework class as the interoperability contract.
+1. **Does the plugin expose an administration area that should be discoverable in Geeklog's administration menu?** Implement `plugin_getadminoption_<plugin>()`.
+2. **Should it also appear in Command & Control?** Implement `plugin_cclabel_<plugin>()` as well. For a normal plugin administration area, both hooks are generally appropriate.
+3. **A small set of page actions?** Use `ADMIN_createMenu()`.
+4. **A persistent set of peer plugin sections with active state or POST items?** Use the `plugin-admin-nav*` convention.
+5. Do not use a theme-framework class as the interoperability contract.
 
 ---
 
@@ -251,7 +288,7 @@ The convention is plain HTML/CSS and is suitable for the current modernization t
 - Geeklog 2.1.1 through 2.2.2;
 - PHP 5.6 through PHP 8.1.
 
-It complements Geeklog Core; it does not replace `ADMIN_createMenu()` or the Plugin API.
+It complements Geeklog Core; it does not replace `plugin_getadminoption_<plugin>()`, `plugin_cclabel_<plugin>()`, `ADMIN_createMenu()` or the Plugin API.
 
 ## Guiding principle
 
