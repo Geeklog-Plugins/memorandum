@@ -175,6 +175,32 @@ marker:27
 
 Consumers must not invent these namespaces. The owning provider defines and documents its stable public identities.
 
+### Addressable means URL-addressable
+
+A resource exposed through Item Info should correspond to a public state that can be reached again from its provider-owned URL.
+
+Do not expose a container or filtered view as a stable content resource when its identity depends only on transient request state such as:
+
+```text
+POST-only form state
+cookie-only filters
+session-only navigation state
+temporary UI selections
+```
+
+If a category, catalogue view, album, forum or similar container is meant to be addressable by other plugins, give it a stable canonical GET URL and make the same provider-owned identity resolve back to that URL.
+
+For example:
+
+```text
+id = category:12
+url = /classifieds/index.php?catid=12
+```
+
+is interoperable, while a category that exists only because the browser previously submitted a form or retained a cookie is not a stable cross-plugin resource.
+
+This matters especially for stored relationships. A consumer may persist `provider + item_id` for months or years; resolving that identity later must not depend on invisible browser state from the original request.
+
 ### Root/catalogue resources
 
 A plugin with a stable public landing page may expose that page as an addressable resource even when it has no database row.
@@ -509,14 +535,27 @@ Recommended uses include:
 - provider-independent annotations or related presentation supplied by another plugin;
 - future integrations that need a safe server-rendered placement point.
 
+A full public resource view may be a leaf item or a container. For example, a provider may legitimately expose one `PLG_itemDisplay()` insertion point on:
+
+```text
+root / catalogue page
+category page
+album page
+forum page
+terminal item page
+```
+
+The important distinction is **full resource view versus repeated presentation**. Call the dispatcher once for the page-level resource being viewed; do not call it for every card, row, thumbnail or search result contained inside that page.
+
 ## Provider rules
 
 A content plugin implementing this placement should:
 
-- call `PLG_itemDisplay()` only for the normal **full item view**, not for every list/card/search result;
+- call `PLG_itemDisplay()` only for the normal **full resource view**, not for every list/card/search result;
 - pass the stable content identity used by its Item Info contract;
 - render returned fragments server-side at a predictable location;
 - keep the provider responsible for its own page layout, permissions and primary content;
+- when a leaf resource depends on a container that has its own ACL or publication state, keep hierarchical visibility consistent across Item Info collection, single-item lookup, URL resolution and the rendered page; a leaf must not become discoverable through one contract while its owning category/container is hidden through another;
 - remain fully functional when no extension fragment is returned;
 - avoid Hub-specific callbacks, direct Hub table access, DOM injection or JavaScript-only insertion;
 - avoid querying another plugin's private tables to construct the extension content.
