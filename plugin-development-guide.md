@@ -4,6 +4,38 @@ A practical, end-to-end guide for building a Geeklog plugin that is installable,
 
 This document is intentionally **transversal**. The repository already contains detailed references for individual topics such as the Plugin API, configuration migration, administration navigation, persistent storage, multisite behavior, shared-file upgrades, and interoperability. This guide explains **in which order those pieces should be assembled** to produce an operational plugin.
 
+## Design principle: simple and robust by default
+
+Prefer the **simplest robust design that solves the shared problem**.
+
+Do not preserve a fragile architecture by accumulating route-specific, version-specific, provider-specific, page-specific, or theme-specific patches around it.
+
+When repeated exceptions appear, stop and examine the underlying contract, data model, lifecycle, or ownership boundary.
+
+A modernized plugin should favor:
+
+- one source of truth;
+- one canonical definition for each Plugin API callback;
+- one generic provider contract instead of consumer-side branches for individual plugins;
+- one clear lifecycle path for install, upgrade, enable, disable, and uninstall;
+- shared helpers only when they remove real duplication or coupling;
+- isolated compatibility code when an older Geeklog version genuinely requires it;
+- removal of obsolete paths once their replacement is proven;
+- explicit ownership of data, rendering, URLs, permissions, and business rules;
+- small coherent refactors over chains of local corrective patches.
+
+Avoid both extremes:
+
+- **patch accumulation** — many local fixes that hide the same structural problem;
+- **premature abstraction** — extra layers introduced before they solve a demonstrated duplication or interoperability need.
+
+A useful warning sign is:
+
+> **Three exceptions to the same rule usually mean the shared design should be revisited.**
+
+Compatibility code is sometimes necessary, especially across Geeklog 2.1.1–2.2.2, but it should be narrow, documented, testable, and removable when the compatibility boundary disappears.
+
+
 ## Current compatibility baseline
 
 Unless a plugin repository explicitly defines another policy, the current modernization target is:
@@ -912,6 +944,9 @@ A plugin should not be called operational until the relevant checks pass.
 ## Definition
 
 - [ ] plugin name and version defined;
+- [ ] simplest robust design identified before adding compatibility branches;
+- [ ] one source of truth defined for owned data and behavior;
+- [ ] repeated exceptions reviewed for an underlying contract/design problem;
 - [ ] Geeklog compatibility defined;
 - [ ] PHP compatibility defined;
 - [ ] data ownership defined;
@@ -1157,9 +1192,21 @@ These mistakes are especially expensive because they often produce a plugin that
 ## Fixing symptoms with compatibility patches everywhere
 
 ```text
-❌ accumulate route-, version-, or page-specific patches without a clear contract
-✅ identify the lifecycle/API contract, fix the shared cause, and isolate unavoidable compatibility code
+❌ accumulate route-, version-, provider-, page-, or theme-specific patches without a clear contract
+✅ identify the shared lifecycle/API/data-model cause, fix it once, and isolate only the unavoidable compatibility code
 ```
+
+If several exceptions keep appearing around the same behavior, do not add a fourth exception automatically. Re-evaluate whether the shared abstraction, identity model, provider contract, ownership boundary, or lifecycle is wrong.
+
+A local patch is acceptable only when:
+
+- the incompatibility is real and bounded;
+- the generic/shared contract cannot safely represent the difference;
+- the patch is isolated;
+- the reason is documented;
+- tests cover the compatibility branch;
+- removal conditions are understood.
+
 
 ---
 
@@ -1168,26 +1215,27 @@ These mistakes are especially expensive because they often produce a plugin that
 For a new plugin, the following order catches architectural mistakes early:
 
 ```text
-1. define plugin contract
-2. create minimal file structure
+1. define plugin contract and ownership boundaries
+2. choose the simplest robust shared design and identify unavoidable compatibility boundaries
+4. create minimal file structure
 3. define table/data ownership
-4. implement install + uninstall
-5. implement configuration defaults
-6. install on a clean Geeklog instance
-7. build protected administration
-8. build one working public page
-9. add CRUD
-10. add configuration migrations
-11. add assets
-12. add public/admin navigation
-13. add optional blocks
-14. add Search / What's New / Item Info / sitemap / feeds as relevant
-15. add persistent file handling if required
-16. test ACL and security tokens
-17. test upgrade from previous version
-18. test supported Geeklog/PHP combinations
-19. build the release ZIP
-20. validate the ZIP itself
+5. implement install + uninstall
+6. implement configuration defaults
+7. install on a clean Geeklog instance
+8. build protected administration
+9. build one working public page
+10. add CRUD
+11. add configuration migrations
+12. add assets
+13. add public/admin navigation
+14. add optional blocks
+15. add Search / What's New / Item Info / sitemap / feeds as relevant
+16. add persistent file handling if required
+17. test ACL and security tokens
+18. test upgrade from previous version
+19. test supported Geeklog/PHP combinations
+20. build the release ZIP
+21. validate the ZIP itself
 ```
 
 This sequence is intentionally lifecycle-first.
