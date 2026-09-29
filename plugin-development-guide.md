@@ -694,6 +694,7 @@ When one provider exposes several object families:
 - prefer provider-owned IDs such as `category:12`, `album:45`, or `forum:8`;
 - expose `title` and `url` through Item Info;
 - expose canonical URL resolution through `plugin_idtourl_PLUGIN()` where supported;
+- do not model POST-only, cookie-only, or session-only UI state as a stable resource; an addressable container should have a canonical provider-owned GET URL;
 - consider optional `is-container`, `parent-id`, and `parent-subtype` fields for lightweight hierarchy.
 
 This keeps the same resource usable on Geeklog 2.1.1 while allowing Geeklog 2.2.2 to carry richer subtype information.
@@ -770,6 +771,7 @@ The acceptance test must prove that:
 - the requested field form is supported;
 - permissions are evaluated under the intended UID;
 - the stable ID is the same across collection, resolution, URL and rendering paths;
+- container and leaf ACL/publication state remain consistent across discovery and rendering;
 - the consumer does not need a provider-specific exception.
 
 See the **FAQ contextual associations reference consumer profile** in [Plugin content interoperability contract](plugin-content-interoperability-contract.md).
