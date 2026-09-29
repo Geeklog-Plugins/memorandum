@@ -857,6 +857,165 @@ The same pattern can then be applied to Documents, Videos, Store, and other addr
 
 The contract also places requirements on consumers.
 
+## Reference consumer profile: FAQ contextual associations
+
+When modernizing a content plugin that should be selectable by the FAQ plugin, do not stop after implementing a callback that merely resembles the Memorandum contract. Validate the provider against the **actual consumer path** used by FAQ.
+
+FAQ currently consumes provider content in four distinct ways.
+
+### 1. Provider discovery
+
+FAQ discovers a third-party provider only when the plugin is active and exposes:
+
+```php
+plugin_getiteminfo_PLUGIN()
+```
+
+Therefore a capability declaration alone is not enough for FAQ association discovery.
+
+### 2. Selectable content collection
+
+For the administration association picker, FAQ requests:
+
+```php
+PLG_getItemInfo(
+    'PLUGIN',
+    '*',
+    'id,title,url,subtype,type',
+    0,
+    array(
+        'limit' => 100,
+        'order' => 'modified-desc'
+    )
+);
+```
+
+A provider intended to work smoothly with FAQ should therefore verify this exact collection call.
+
+FAQ accepts collection records in either of these forms:
+
+```php
+array(
+    'id'      => 'category:12',
+    'title'   => 'Guides',
+    'url'     => 'https://example.test/documents/category/12',
+    'subtype' => 'category'
+)
+```
+
+or the historical positional shape:
+
+```php
+array(
+    'category:12',
+    'Guides',
+    'https://example.test/documents/category/12'
+)
+```
+
+For associative records, FAQ reads `subtype` first and falls back to `type` when `subtype` is empty.
+
+The practical compatibility target is therefore:
+
+- stable non-empty `id`;
+- useful `title`;
+- public/canonical `url` when available;
+- `subtype` for multi-object providers;
+- permission-aware collection results;
+- safe support for `limit`;
+- graceful handling of the requested `order` even when the provider cannot implement every ordering mode exactly.
+
+### 3. Concrete item title and URL resolution
+
+When displaying stored associations in administration, FAQ resolves the target through the provider rather than reading provider tables.
+
+The resolution order is:
+
+```text
+URL
+    1. plugin_idtourl_PLUGIN($subtype, $item_id)
+    2. PLG_getItemInfo(PLUGIN, item_id, 'url', current_user_uid)
+
+Title
+    1. PLG_getItemInfo(PLUGIN, item_id, 'title', current_user_uid)
+```
+
+For single-field Item Info requests, FAQ deliberately accepts historical provider return shapes:
+
+```text
+scalar
+associative array keyed by field
+numeric array whose first value is the requested field
+```
+
+A provider should still prefer one consistent documented Item Info behavior, but it must be tested through Geeklog's dispatcher rather than only by directly calling the plugin callback.
+
+A provider that works only for a multi-field direct callback test but fails for:
+
+```php
+PLG_getItemInfo('PLUGIN', $id, 'title', $uid);
+PLG_getItemInfo('PLUGIN', $id, 'url', $uid);
+```
+
+is not fully aligned with the current FAQ consumer.
+
+### 4. Public contextual rendering
+
+For automatic contextual FAQ rendering, the content owner must expose the generic Geeklog extension point on the relevant public surface:
+
+```php
+PLG_itemDisplay($stableId, 'PLUGIN')
+```
+
+The provider owns where the returned fragments are inserted.
+
+FAQ does not need to know the provider's template, route, table or page structure. It matches the provider/type and stable item ID stored in the association.
+
+If the provider exposes several public object families, the ID passed to `PLG_itemDisplay()` must remain unambiguous because this dispatcher does not carry a separate subtype.
+
+Examples:
+
+```text
+root
+category:12
+album:45
+forum:8
+topic:123
+marker:27
+```
+
+The same stable ID should be used consistently by:
+
+- Item Info collection;
+- concrete Item Info resolution;
+- `plugin_idtourl_PLUGIN()`;
+- `PLG_itemDisplay()`;
+- lifecycle notifications where applicable.
+
+### FAQ alignment acceptance test
+
+Before declaring a plugin "FAQ interoperable", test the following through a real Geeklog runtime:
+
+```text
+[ ] plugin appears in FAQ Associations provider list
+[ ] FAQ can enumerate its selectable objects without provider-specific SQL
+[ ] each returned object has the expected stable ID
+[ ] title is readable through a single-field Item Info request
+[ ] URL resolves through plugin_idtourl_*() or single-field Item Info
+[ ] subtype is exposed for multi-object providers
+[ ] current-user administration lookup respects permissions
+[ ] an association can be saved and redisplayed with a human-readable linked title
+[ ] the provider calls PLG_itemDisplay() on the intended public page
+[ ] the saved FAQ/category renders on that page
+[ ] the same identity works on Geeklog 2.1.1 without requiring subtype transport
+[ ] Geeklog 2.2.2 may additionally use subtype-aware callbacks without changing the stable ID
+```
+
+This is a **consumer acceptance profile**, not a FAQ-specific API. The provider still implements generic Geeklog/Memorandum contracts. FAQ is simply a concrete reference consumer used to prove that those contracts work end-to-end.
+
+If another consumer such as Hub or Agent exercises a different part of the shared contract, test that consumer's actual call path as well. "The callback exists" is not sufficient interoperability evidence.
+
+
 ## Hello
 
 Hello should:
