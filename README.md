@@ -21,6 +21,8 @@ The longer-term architecture described in this repository may target Geeklog 2.2
 
 ## How to read this repository
 
+**Starting a new Geeklog plugin? Begin with [`plugin-development-guide.md`](plugin-development-guide.md).** It provides the end-to-end build order from plugin definition, tables and installation through configuration, administration, public pages, upgrades, packaging and common failure modes.
+
 The documents are separated conceptually into four layers.
 
 ### 1. Current Geeklog facts
