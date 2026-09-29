@@ -404,7 +404,24 @@ plugin_cclabel_PLUGIN()
 
 The first feeds Geeklog's administration menu; the second feeds Command & Control. Themes and dashboards should consume these native entries rather than hard-code plugin URLs.
 
-See [Plugin admin navigation](plugin-admin-navigation.md).
+See:
+
+- [Plugin admin navigation](plugin-admin-navigation.md)
+- [Plugin administration UX guidelines](plugin-admin-ux-guidelines.md)
+
+## First-use documentation
+
+For a plugin with more than trivial administration, provide a short installed Getting started / Help path.
+
+A new administrator should be able to understand:
+
+1. what the plugin does;
+2. what must be configured first;
+3. how to create or manage the primary object;
+4. where the result appears publicly;
+5. what to check when the expected result does not appear.
+
+This can be a short block on the administration home page, a collapsible help section, or a dedicated Help page. Keep it concise and aligned with the shipped version.
 
 ## Configuration access
 
@@ -446,6 +463,27 @@ The page should:
 - avoid direct dependence on a specific theme.
 
 For the current Geeklog 2.1.1–2.2.2 compatibility range, modernized full pages should use `COM_createHTMLDocument()`, not legacy `COM_siteHeader()` / `COM_siteFooter()` rendering.
+
+## Public design, usability and SEO
+
+A public page is not complete merely because it renders without errors.
+
+For every significant public surface, review:
+
+- information hierarchy and readability;
+- responsive/mobile behavior;
+- accessibility and keyboard use;
+- empty/error states;
+- canonical identity and URL;
+- document title and meta description;
+- indexability;
+- crawlable internal links;
+- structured data and social metadata where appropriate.
+
+See:
+
+- [Plugin public design guidelines](plugin-public-design-guidelines.md)
+- [Plugin SEO public page guidelines](plugin-seo-public-page-guidelines.md)
 
 ## Public navigation
 
@@ -1026,6 +1064,10 @@ A plugin should not be called operational until the relevant checks pass.
 ## Administration
 
 - [ ] administration entry point checks ACL;
+- [ ] administration home/first page explains the plugin purpose when needed;
+- [ ] concise Getting started / Help path exists for non-trivial workflows;
+- [ ] administration pages are responsive and pleasant to scan/use;
+- [ ] forms, lists and destructive actions are visually separated;
 - [ ] state-changing actions use security tokens;
 - [ ] inputs validated;
 - [ ] output escaped;
@@ -1038,6 +1080,8 @@ A plugin should not be called operational until the relevant checks pass.
 ## Public
 
 - [ ] public page renders with `COM_createHTMLDocument()`;
+- [ ] public design reviewed against semantic/responsive/accessibility guidelines;
+- [ ] SEO identity/title/canonical/indexability reviewed where the page is public/indexable;
 - [ ] anonymous ACL tested;
 - [ ] logged-in ACL tested;
 - [ ] administrator ACL tested;
@@ -1318,6 +1362,9 @@ Use this guide as the starting point, then move to the detailed references when 
 | Configuration and existing-install migration | [plugin-configuration-migration-guide-2.2.2.md](plugin-configuration-migration-guide-2.2.2.md) |
 | Configuration contextual help/tooltips | [plugin-configuration-tooltips.md](plugin-configuration-tooltips.md) |
 | Admin menus and local section navigation | [plugin-admin-navigation.md](plugin-admin-navigation.md) |
+| Administration usability and first-use help | [plugin-admin-ux-guidelines.md](plugin-admin-ux-guidelines.md) |
+| Public design, responsive behavior and accessibility | [plugin-public-design-guidelines.md](plugin-public-design-guidelines.md) |
+| Public page SEO baseline | [plugin-seo-public-page-guidelines.md](plugin-seo-public-page-guidelines.md) |
 | Persistent files | [plugin-persistent-storage-guide.md](plugin-persistent-storage-guide.md) |
 | Multisite constraints | [multisite-development-principles.md](multisite-development-principles.md) |
 | Shared files with independently upgraded sites | [plugin-shared-files-upgrade-safety.md](plugin-shared-files-upgrade-safety.md) |
