@@ -290,6 +290,23 @@ The convention is plain HTML/CSS and is suitable for the current modernization t
 
 It complements Geeklog Core; it does not replace `plugin_getadminoption_<plugin>()`, `plugin_cclabel_<plugin>()`, `ADMIN_createMenu()` or the Plugin API.
 
+## Relationship with administration UX
+
+Navigation is only one part of a usable plugin administration area.
+
+Administration pages should also provide:
+
+- a clear first-use orientation for non-trivial plugins;
+- concise Getting started / Help guidance;
+- responsive forms and lists;
+- human-readable object labels;
+- explicit success/error feedback;
+- deliberate empty states;
+- separated destructive actions;
+- accessible keyboard/focus behavior.
+
+See [`plugin-admin-ux-guidelines.md`](plugin-admin-ux-guidelines.md).
+
 ## Guiding principle
 
 > Use Geeklog's native administration primitives first. Add only the smallest shared convention needed for persistent plugin-local section navigation that Core does not currently model.
