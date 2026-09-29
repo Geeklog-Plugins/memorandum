@@ -55,6 +55,9 @@ Core principles:
 Additional conventions:
 
 - [`plugin-admin-navigation.md`](plugin-admin-navigation.md) — native Geeklog admin-menu usage and the shared fallback contract for persistent plugin-local section navigation.
+- [`plugin-admin-ux-guidelines.md`](plugin-admin-ux-guidelines.md) — administration usability, responsive layout, clear workflows, first-use orientation and concise built-in help.
+- [`plugin-public-design-guidelines.md`](plugin-public-design-guidelines.md) — theme-neutral public design, responsive behavior, accessibility, readable content and robust UI states.
+- [`plugin-seo-public-page-guidelines.md`](plugin-seo-public-page-guidelines.md) — page-level SEO baseline for canonical public plugin resources, metadata, semantic HTML, structured data, containers and sitemap participation.
 - [`plugin-persistent-storage-guide.md`](plugin-persistent-storage-guide.md)
 - [`multisite-development-principles.md`](multisite-development-principles.md)
 - [`plugin-shared-files-upgrade-safety.md`](plugin-shared-files-upgrade-safety.md) — required compatibility behavior when several sites share plugin files but upgrade their persisted state at different times.
