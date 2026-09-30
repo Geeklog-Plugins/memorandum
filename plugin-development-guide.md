@@ -1003,13 +1003,109 @@ Do not encode a Geeklog version in the filename if the same archive supports the
 
 A release workflow should not merely run tests on the repository and then assume the ZIP is correct.
 
+For Geeklog 2.1.1-compatible packages, the ZIP **must contain one top-level directory whose name is the plugin id**. The plugin files must live inside that directory.
+
+Correct:
+
+```text
+myplugin_1.2.3_2.1.1.zip
+└── myplugin/
+    ├── autoinstall.php
+    ├── functions.inc
+    ├── public_html/
+    ├── admin/
+    ├── language/
+    └── ...
+```
+
+Incorrect:
+
+```text
+myplugin_1.2.3_2.1.1.zip
+├── autoinstall.php
+├── functions.inc
+├── public_html/
+└── ...
+```
+
+This distinction matters because Geeklog 2.1.1 derives the plugin directory name from the archive's first top-level entry. A ZIP may therefore be structurally valid and pass `unzip -t`, yet still be unusable by Geeklog.
+
+A typical failure mode is:
+
+- upload reports success;
+- no installation follows;
+- the plugin does not appear in the list of uninstalled plugins;
+- no useful error is written to the plugin log.
+
+That usually means the archive was unpacked with the wrong top-level layout, so Geeklog never finds:
+
+```text
+plugins/PLUGIN/functions.inc
+plugins/PLUGIN/autoinstall.php
+```
+
 CI should inspect the produced archive and verify:
 
-- expected root directory;
-- required files present;
+- exactly one expected root plugin directory;
+- required files present **under that root directory**;
 - forbidden files absent;
 - PHP syntax of shipped files;
 - archive name/version consistency.
+
+A practical shell check is:
+
+```bash
+PLUGIN="myplugin"
+ARCHIVE="dist/myplugin_1.2.3_2.1.1.zip"
+
+unzip -t "$ARCHIVE"
+
+mapfile -t top_level_entries < <(
+    unzip -Z1 "$ARCHIVE" |
+        sed 's#^\./##' |
+        cut -d/ -f1 |
+        sed '/^$/d' |
+        sort -u
+)
+
+if [ "${#top_level_entries[@]}" -ne 1 ] || [ "${top_level_entries[0]}" != "$PLUGIN" ]; then
+    echo "Invalid Geeklog package layout"
+    exit 1
+fi
+
+for required in \
+    "$PLUGIN/autoinstall.php" \
+    "$PLUGIN/functions.inc" \
+    "$PLUGIN/public_html/index.php"
+do
+    unzip -Z1 "$ARCHIVE" | grep -Fxq "$required" || exit 1
+done
+```
+
+Do not use a packaging command that changes directory into the plugin payload and then runs:
+
+```bash
+zip -r archive.zip .
+```
+
+unless the staging directory itself already contains the required `PLUGIN/` root. Otherwise the plugin files will be written directly at the ZIP root.
+
+A safer staging pattern is:
+
+```text
+STAGE/
+└── myplugin/
+    └── plugin payload
+```
+
+and then:
+
+```bash
+cd "$STAGE"
+zip -r "$ARCHIVE" myplugin
+```
+
+The archive is not considered release-ready until this layout check passes.
 
 ---
 
@@ -1334,6 +1430,18 @@ A practical maintenance rule is:
 ❌ trust the repository build because tests passed before ZIP creation
 ✅ inspect and validate the actual generated archive in CI
 ```
+
+## Packaging files directly at the ZIP root
+
+```text
+❌ archive.zip/autoinstall.php
+❌ archive.zip/functions.inc
+
+✅ archive.zip/PLUGIN/autoinstall.php
+✅ archive.zip/PLUGIN/functions.inc
+```
+
+Geeklog 2.1.1 derives the plugin name from the first top-level archive entry. A flat ZIP can therefore report a successful upload while never becoming installable.
 
 ## Fixing symptoms with compatibility patches everywhere
 
