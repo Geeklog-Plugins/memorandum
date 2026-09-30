@@ -578,6 +578,57 @@ This matters especially for plugins such as Maps where maps and markers may both
 
 ---
 
+
+## Contextual relationship placement and manual rendering
+
+Cross-plugin relationships may exist independently from automatic public injection.
+
+A relation-capable consumer should therefore distinguish between:
+
+- **automatic placement** — the related fragment is rendered through the provider's native extension point;
+- **manual-only placement** — the relation remains stored and permission-aware, but no automatic fragment is injected;
+- **explicit contextual rendering** — an author deliberately inserts the related fragment inside the owning content.
+
+Manual-only must not mean "relation disabled" or "data ignored". It means that presentation is author-controlled.
+
+When the content format supports Geeklog autotags, a consumer may expose a contextual autotag that renders the relationships of the current content without requiring the author to repeat its identity. Conceptually:
+
+```text
+[consumer-context]
+```
+
+The autotag should use the content context already supplied by Geeklog whenever possible. In particular, when `PLG_replaceTags()` is called with a provider/type and content id, that `provider + id` pair should be treated as the authoritative current-content identity.
+
+Do not reconstruct the identity from URL patterns when Geeklog has already supplied it.
+
+Compatibility fallbacks based on the request route are acceptable only when:
+
+- the supported Geeklog call path does not provide the context;
+- the fallback is limited to a known provider-owned route;
+- the provider/id mapping is unambiguous;
+- the fallback is isolated and documented;
+- failure to resolve the context does not leak technical error text to public visitors.
+
+Explicit autotags that name a provider and id may also remain available for advanced or legacy cases, for example:
+
+```text
+[consumer-related:article my-story-id]
+```
+
+The contextual and explicit forms must use the same relationship engine as automatic rendering. They must therefore preserve the same:
+
+- ACL checks;
+- enabled/disabled state;
+- ordering;
+- duplicate suppression;
+- inheritance rules;
+- conflict policy;
+- provider-owned identity rules.
+
+A manual placement path must not become a shortcut around the business rules used by automatic placement.
+
+Provider-specific placement choices may expose only the positions that the provider can reliably support. For example, a provider with one native item-display insertion point may offer only `automatic` and `manual`, while another provider may expose several stable page-level positions. Consumers should model these as provider capabilities rather than hard-code one global set of positions for every content type.
+
 # 7. Keep What's New as a presentation capability
 
 Plugins whose content belongs in Geeklog's native **What's New** block may also implement:
