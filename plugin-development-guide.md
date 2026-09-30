@@ -264,6 +264,61 @@ Where practical, initialization and migration helpers should be idempotent:
 - do not duplicate records;
 - do not destroy user data to repair a partially initialized state.
 
+## Autoinstall scope: declare plugin globals explicitly
+
+Geeklog 2.1.1 may load plugin files such as `functions.inc` and `install_defaults.php` from inside the core autoinstall function `plugin_do_autoinstall()`.
+
+In PHP, a file included from inside a function inherits that function scope. Plugin variables that normally appear to be global when loaded during standard bootstrap are therefore **not automatically available as globals during autoinstall**.
+
+This can produce failures such as:
+
+```text
+array_merge(): Argument #1 is not an array
+```
+
+when code assumes that a global default/configuration array already exists.
+
+For bootstrap/install files that depend on plugin-owned globals, declare them explicitly before use:
+
+```php
+global $_CONF;
+global $_MYPLUGIN_DEFAULT, $_MYPLUGIN_CONF;
+global $LANG_MYPLUGIN, $LANG_MYPLUGIN_ADMIN;
+```
+
+The same rule applies to any plugin-owned arrays populated by language or configuration files.
+
+Do not rely on `require_once` to solve scope. `require_once` prevents duplicate inclusion, but it does not promote variables into global scope. During autoinstall, it can actually hide the problem if a file was already included in another scope.
+
+Safer pattern:
+
+```php
+global $_CONF, $_MYPLUGIN_DEFAULT, $_MYPLUGIN_CONF;
+global $LANG_MYPLUGIN;
+
+$pluginPath = $_CONF['path'] . 'plugins/myplugin/';
+
+if (!isset($LANG_MYPLUGIN) || !is_array($LANG_MYPLUGIN)) {
+    require $pluginPath . 'language/english.php';
+}
+
+require_once $pluginPath . 'install_defaults.php';
+
+if (!isset($_MYPLUGIN_DEFAULT) || !is_array($_MYPLUGIN_DEFAULT)) {
+    $_MYPLUGIN_DEFAULT = array();
+}
+```
+
+Important distinctions:
+
+- use explicit `global` declarations for plugin-owned state needed during bootstrap/install;
+- guard expected arrays with `isset()` + `is_array()`;
+- do not assume a language/config file included earlier populated the current scope;
+- keep `functions.inc` bootstrap-safe because Geeklog may load it from several lifecycle paths;
+- test the real upload/autoinstall path on Geeklog 2.1.1, not only normal page bootstrap.
+
+A plugin that works after manual file placement can still fail during archive upload if this scope behavior is not tested.
+
 ---
 
 # 5. Make activation and deactivation safe
@@ -1161,6 +1216,9 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] each important Plugin API callback has one canonical definition;
 - [ ] canonical callback files are loaded on the required runtime paths;
 - [ ] duplicate callback definitions are guarded by CI/source-contract tests where useful;
+- [ ] plugin-owned globals used by `functions.inc` / `install_defaults.php` are explicitly declared for autoinstall scope;
+- [ ] language/config/default arrays are validated before merge/use;
+- [ ] real Geeklog 2.1.1 upload/autoinstall path tested, not only normal bootstrap;
 - [ ] disabled plugin does not leave callable public/admin behavior unintentionally active.
 
 ## Administration
@@ -1416,6 +1474,19 @@ A practical maintenance rule is:
 ❌ load large optional subsystems unconditionally from functions.inc
 ✅ keep bootstrap minimal and load feature code only where needed
 ```
+
+## Assuming top-level scope during autoinstall
+
+```text
+❌ assume $_PLUGIN_DEFAULT / language arrays are global because normal bootstrap works
+❌ rely on require_once to make included variables globally visible
+
+✅ declare plugin-owned globals explicitly
+✅ validate arrays before array_merge() or indexed access
+✅ test the actual Geeklog 2.1.1 upload/autoinstall path
+```
+
+Geeklog 2.1.1 can include plugin files from inside `plugin_do_autoinstall()`, so those files inherit function scope. A plugin may therefore work during normal requests but fail only while being installed from an uploaded archive.
 
 ## Upgrade assumes all multisite databases are synchronized
 
