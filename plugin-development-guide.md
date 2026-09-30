@@ -1043,6 +1043,38 @@ A useful naming pattern is:
 plugin_VERSION_GEEKLOG.zip
 ```
 
+## Release version names must be stable
+
+When a branch or archive represents a concrete release such as `1.4.0`, the plugin version reported to Geeklog must be exactly that release version:
+
+```text
+1.4.0
+```
+
+Do not publish runtime version names such as:
+
+```text
+1.4.0-dev
+1.4.0-final
+1.4.0-release
+```
+
+unless the project has explicitly adopted a prerelease/versioning scheme that Geeklog and all upgrade logic are designed to understand.
+
+For normal Geeklog plugin releases, keep the canonical version simple and stable across:
+
+- `autoinstall.php` / `pi_version`;
+- `plugin_chkVersion_PLUGIN()`;
+- upgrade comparisons;
+- README/release notes;
+- archive naming;
+- displayed administration metadata.
+
+Development state belongs in branch names, roadmap/status text, issues, milestones, or release notes — **not in the canonical runtime plugin version**.
+
+A mismatch such as `1.4.0-dev` in code while the archive is named `plugin_1.4.0_2.1.1.zip` creates unnecessary upgrade ambiguity and can cause false version differences.
+
+
 For repositories supporting multiple Geeklog compatibility artifacts, use an unambiguous convention such as:
 
 ```text
@@ -1171,6 +1203,8 @@ A plugin should not be called operational until the relevant checks pass.
 ## Definition
 
 - [ ] plugin name and version defined;
+- [ ] release version is canonical and stable (for example `1.4.0`, not `1.4.0-dev`);
+- [ ] runtime version, upgrade version, documentation and archive name are consistent;
 - [ ] simplest robust design identified before adding compatibility branches;
 - [ ] one source of truth defined for owned data and behavior;
 - [ ] repeated exceptions reviewed for an underlying contract/design problem;
@@ -1501,6 +1535,18 @@ Geeklog 2.1.1 can include plugin files from inside `plugin_do_autoinstall()`, so
 ❌ trust the repository build because tests passed before ZIP creation
 ✅ inspect and validate the actual generated archive in CI
 ```
+
+## Shipping development suffixes as the release version
+
+```text
+❌ pi_version = 1.4.0-dev
+❌ archive says 1.4.0 while runtime reports 1.4.0-dev
+
+✅ pi_version = 1.4.0
+✅ keep development status in branch/roadmap/release notes
+```
+
+The canonical runtime version should describe the release identity, not the development state of the branch.
 
 ## Packaging files directly at the ZIP root
 
