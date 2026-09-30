@@ -1052,6 +1052,10 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] new-install defaults work;
 - [ ] existing-install migration works;
 - [ ] labels/options exist in supported languages;
+- [ ] no user-visible strings hardcoded in PHP/templates/JavaScript;
+- [ ] all referenced language keys exist in every maintained language file;
+- [ ] JavaScript-visible messages are supplied by language data rather than embedded English fallbacks;
+- [ ] at least one non-English public/admin/configuration pass has been tested;
 - [ ] missing configuration does not cause bootstrap fatal errors;
 - [ ] configuration migration is idempotent.
 
@@ -1160,6 +1164,64 @@ A plugin should not be called operational until the relevant checks pass.
 # 20. Frequent mistakes observed during modernization
 
 These mistakes are especially expensive because they often produce a plugin that looks almost complete while one lifecycle step remains broken.
+
+## Localization and visible-string discipline
+
+User-visible text must not be hardcoded in PHP, templates, or JavaScript.
+
+This applies to all plugin surfaces, including:
+
+- public pages;
+- administration pages and navigation;
+- buttons and form labels;
+- headings and table columns;
+- validation and status messages;
+- AJAX responses displayed to users;
+- JavaScript loading, error and fallback messages;
+- accessibility text such as `aria-label`;
+- Configuration labels, select values, fieldset/tab names and tooltips.
+
+Prefer plugin language arrays as the single source of visible strings. Keep related surfaces separated when useful, for example:
+
+```php
+$LANG_PLUGIN_COMMON
+$LANG_PLUGIN_ADMIN
+$LANG_PLUGIN_RELATIONS
+$LANG_PLUGIN_COVERAGE
+```
+
+Do not keep an English literal in code as a silent fallback for a missing language key. If a supported language does not yet have a native translation for a new key, keep the key contract complete in that language file and use an explicit documented fallback there instead. This avoids hidden English strings spread through application code and prevents `Undefined array key` warnings.
+
+For JavaScript, do not create a second untracked translation system. Pass localized strings from PHP to the script through rendered data, JSON or an equivalent provider-owned mechanism, then let JavaScript consume those values.
+
+Example:
+
+```php
+<select
+  data-msg-loading="<?= htmlspecialchars($LANG_PLUGIN_ADMIN['loading']) ?>"
+  data-msg-error="<?= htmlspecialchars($LANG_PLUGIN_ADMIN['load_error']) ?>">
+```
+
+The corresponding JavaScript should consume these values instead of embedding English text.
+
+### Language parity
+
+Every maintained language file should expose the same functional key contract for the current plugin version.
+
+Before release:
+
+1. collect the language keys actually referenced by PHP/templates/JavaScript;
+2. verify that every referenced key exists in the primary language;
+3. verify that every supported language defines the same required keys;
+4. scan templates and generated HTML for visible hardcoded strings;
+5. scan JavaScript for visible fallback strings that bypass language files;
+6. test at least one non-English language on both public and administration surfaces.
+
+Do not assume that adding one translated file is sufficient. Existing historical language files must also be kept structurally current when new public/admin/configuration keys are introduced.
+
+A practical maintenance rule is:
+
+> **Code consumes language keys; language files own visible wording.**
 
 ## Hardcoded database prefix
 
