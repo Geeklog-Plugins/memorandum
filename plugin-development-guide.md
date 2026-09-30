@@ -1300,6 +1300,7 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] Item Info follows the documented return contract;
 - [ ] provider tested through at least one real maintained consumer when one exists;
 - [ ] FAQ association acceptance profile tested when the plugin is expected to host contextual FAQs;
+- [ ] manual/contextual relationship placement, when supported, reuses the same ACL, deduplication, inheritance and conflict rules as automatic rendering;
 - [ ] consumers normalize scalar/positional/associative Item Info forms where compatibility requires it;
 - [ ] administration Item Info lookups use the current user's UID when appropriate;
 - [ ] canonical URLs are provider-owned and resolved without hard-coded consumer routing;
