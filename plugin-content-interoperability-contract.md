@@ -562,6 +562,34 @@ A content plugin implementing this placement should:
 
 This is a **generic Geeklog interoperability point**, not a requirement to depend on Hub.
 
+## Consumer schema safety at the extension boundary
+
+A provider that correctly calls:
+
+```php
+PLG_itemDisplay($id, $type)
+```
+
+must not become unavailable because a consuming plugin has an older or partially migrated version of **its own** persistence schema.
+
+This is especially important for relation-capable consumers such as FAQ, Hub, annotations, recommendation engines, or other plugins that receive `PLG_itemDisplay()` calls from many unrelated providers. A schema assumption inside the consumer can otherwise make every participating provider fail even though those providers are correctly implementing the Geeklog extension contract.
+
+Therefore a consumer invoked through `PLG_itemDisplay()` should:
+
+- treat its own persisted schema as an internal compatibility boundary;
+- avoid assuming that every optional/new relation column already exists merely because the new code files are present;
+- when supporting an older persisted state during an upgrade window, inspect the actual schema or use one centralized schema-capability helper before constructing SQL that references newer columns;
+- provide documented compatibility defaults for fields that did not exist in the older supported state;
+- keep those fallbacks inside the consumer's data-access layer rather than adding provider-specific exceptions;
+- return no fragment, or a reduced but valid fragment, when the consumer cannot safely resolve its own contextual data;
+- never require the provider to know which consumer schema version is installed.
+
+For example, if a newer consumer relation table adds fields such as `topic_scope` or `sort_order`, code deployed before the database migration completes must not issue unconditional queries against those columns from the public extension callback.
+
+This rule is **not** permission to leave schemas indefinitely half-migrated. The normal upgrade path must still converge on the current schema. The compatibility layer exists to keep shared-file deployments, interrupted upgrades, and supported transitional states from breaking unrelated provider pages.
+
+The same principle applies to internal query expressions: if a compatibility helper has already resolved a safe field expression for the current schema, downstream SQL must consistently use that resolved expression rather than later referencing the new column directly.
+
 ## Identity and subtype caution
 
 The current dispatcher signature is:
@@ -1096,6 +1124,7 @@ Before declaring a plugin "FAQ interoperable", test the following through a real
 [ ] current-user administration lookup respects permissions
 [ ] an association can be saved and redisplayed with a human-readable linked title
 [ ] the provider calls PLG_itemDisplay() on the intended public page
+[ ] the consumer still handles the previous supported/partially migrated consumer schema without breaking the provider page
 [ ] the saved FAQ/category renders on that page
 [ ] the same identity works on Geeklog 2.1.1 without requiring subtype transport
 [ ] Geeklog 2.2.2 may additionally use subtype-aware callbacks without changing the stable ID
