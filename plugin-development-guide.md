@@ -917,6 +917,18 @@ When several Geeklog sites share one plugin directory, deploying new plugin file
 
 New code should remain compatible with the previous supported persisted state until the active site's upgrade is explicitly run.
 
+This requirement also applies to **runtime extension callbacks**. If a plugin is a consumer of `PLG_itemDisplay()`, Item Info, lifecycle hooks, or another shared dispatcher, newly deployed code must not assume that its own database already contains every column introduced by that code. A failure in the consumer can otherwise break an unrelated provider page that merely called the standard Geeklog API correctly.
+
+During a supported transition, keep schema compatibility centralized in the owning plugin's data-access layer:
+
+- detect the actual owned schema when a newer column is optional during the upgrade window;
+- resolve one safe SQL expression/default for each missing field;
+- use that resolved expression consistently throughout the query;
+- degrade gracefully when contextual data cannot be read safely;
+- never push consumer-version checks or consumer-specific workarounds into providers.
+
+The upgrade must still normalize the database to the current schema. Runtime compatibility is a safety boundary, not a substitute for migration.
+
 See:
 
 - [Multisite development principles](multisite-development-principles.md)
@@ -1300,6 +1312,8 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] Item Info follows the documented return contract;
 - [ ] provider tested through at least one real maintained consumer when one exists;
 - [ ] FAQ association acceptance profile tested when the plugin is expected to host contextual FAQs;
+- [ ] consumers invoked through shared dispatchers tolerate the previous supported/partially migrated state of their own schema without breaking provider pages;
+- [ ] compatibility SQL uses centralized resolved field expressions/defaults consistently and does not later reference a missing new column directly;
 - [ ] manual/contextual relationship placement, when supported, reuses the same ACL, deduplication, inheritance and conflict rules as automatic rendering;
 - [ ] consumers normalize scalar/positional/associative Item Info forms where compatibility requires it;
 - [ ] administration Item Info lookups use the current user's UID when appropriate;
@@ -1330,7 +1344,8 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] schema migration tested;
 - [ ] configuration migration tested;
 - [ ] interrupted/repeated upgrade behavior tested;
-- [ ] shared-files compatibility considered.
+- [ ] shared-files compatibility considered;
+- [ ] new runtime code does not require newly added owned-schema columns before the site's upgrade has completed.
 
 ## Compatibility
 
@@ -1560,6 +1575,20 @@ The canonical runtime version should describe the release identity, not the deve
 ```
 
 Geeklog 2.1.1 derives the plugin name from the first top-level archive entry. A flat ZIP can therefore report a successful upload while never becoming installable.
+
+## Consumer extension callback assumes its newest schema
+
+```text
+❌ PLG_itemDisplay() callback unconditionally queries newly added relation columns before every supported installation has migrated
+❌ fix each affected provider with a provider-specific bypass
+
+✅ keep schema compatibility inside the consuming plugin
+✅ detect the owned schema once through a centralized helper
+✅ use safe defaults/resolved SQL expressions during the supported transition
+✅ let the normal upgrade converge the schema to the current version
+```
+
+A correctly implemented provider should not need to know whether FAQ, Hub, or another consumer has finished migrating its private relation tables.
 
 ## Fixing symptoms with compatibility patches everywhere
 
