@@ -1084,6 +1084,34 @@ For normal Geeklog plugin releases, keep the canonical version simple and stable
 
 Development state belongs in branch names, roadmap/status text, issues, milestones, or release notes — **not in the canonical runtime plugin version**.
 
+## Branch discipline: never assume the default branch is the work branch
+
+A repository's default branch (often `main`) is not automatically the branch on which current development must be written.
+
+Before **any repository write**:
+
+1. identify the explicit active development branch from the user's instruction, repository documentation/roadmap, or the already established development context;
+2. verify that the branch exists and fetch the file from that exact ref before editing it;
+3. write back to that same branch unless the user explicitly asks for another target;
+4. do not fall back to the repository default branch merely because a write tool accepts an omitted branch argument.
+
+When a project uses a branch such as:
+
+```text
+develop-1.3.0
+```
+
+all changes intended for that unreleased version belong there. The release/default branch must remain unchanged until the project's normal PR/merge/release process intentionally promotes the work.
+
+This rule applies equally to code, documentation, CI workflows, generated metadata and supporting integration changes in another repository. If work in plugin A requires a corresponding change in plugin B, first resolve plugin B's own active development branch; do not assume both repositories use `main` or the same branch name.
+
+If a change was accidentally written to the wrong branch:
+
+- restore the unintended branch to its pre-change state without carrying unrelated commits backward;
+- reapply the intended change on the correct development branch;
+- verify both branch heads afterward;
+- document the branch mistake if the development guide was not explicit enough to prevent recurrence.
+
 A mismatch such as `1.4.0-dev` in code while the archive is named `plugin_1.4.0_2.1.1.zip` creates unnecessary upgrade ambiguity and can cause false version differences.
 
 
@@ -1217,6 +1245,8 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] plugin name and version defined;
 - [ ] release version is canonical and stable (for example `1.4.0`, not `1.4.0-dev`);
 - [ ] runtime version, upgrade version, documentation and archive name are consistent;
+- [ ] every write targeted the explicitly active development branch rather than assuming the repository default branch;
+- [ ] cross-repository supporting changes used each repository's own active development branch;
 - [ ] simplest robust design identified before adding compatibility branches;
 - [ ] one source of truth defined for owned data and behavior;
 - [ ] repeated exceptions reviewed for an underlying contract/design problem;
