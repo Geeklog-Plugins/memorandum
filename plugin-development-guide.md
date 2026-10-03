@@ -50,6 +50,7 @@ See:
 - [Plugin API reference](plugin-api-reference-2.2.2.md)
 - [Configuration migration guide](plugin-configuration-migration-guide-2.2.2.md)
 - [Shared-files upgrade safety](plugin-shared-files-upgrade-safety.md)
+- [Plugin asset loading and cache versioning](plugin-asset-loading-versioning.md)
 - [Multisite development principles](multisite-development-principles.md)
 
 ---
@@ -122,6 +123,10 @@ Common responsibilities:
 - `templates/` — presentation markup;
 - `sql/` — install or migration SQL when appropriate;
 - `css/`, `js/` — plugin-owned assets.
+
+Plugin-owned static assets must not stop at “the file exists”. They should be external files, loaded only on relevant pages/contexts where practical, and use deterministic cache versioning. For administration assets, prefer a clear path such as `admin/css/admin.css` or `css/admin.css`, load it through the normal Geeklog header integration, and verify the asset is present in the packaged ZIP.
+
+See [Plugin asset loading and cache versioning](plugin-asset-loading-versioning.md).
 
 Keep unconditional bootstrap code in `functions.inc` small. Any fatal error there can break every page on which Geeklog loads the plugin.
 
@@ -1712,6 +1717,7 @@ Use this guide as the starting point, then move to the detailed references when 
 | Configuration contextual help/tooltips | [plugin-configuration-tooltips.md](plugin-configuration-tooltips.md) |
 | Admin menus and local section navigation | [plugin-admin-navigation.md](plugin-admin-navigation.md) |
 | Administration usability and first-use help | [plugin-admin-ux-guidelines.md](plugin-admin-ux-guidelines.md) |
+| CSS/JS loading, cache-busting and packaged assets | [plugin-asset-loading-versioning.md](plugin-asset-loading-versioning.md) |
 | Public design, responsive behavior and accessibility | [plugin-public-design-guidelines.md](plugin-public-design-guidelines.md) |
 | Public page SEO baseline | [plugin-seo-public-page-guidelines.md](plugin-seo-public-page-guidelines.md) |
 | Persistent files | [plugin-persistent-storage-guide.md](plugin-persistent-storage-guide.md) |
