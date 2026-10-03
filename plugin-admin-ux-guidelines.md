@@ -59,6 +59,14 @@ Delete, purge, reset, rebuild and migration actions must be separated visually, 
 
 After an action, explicitly report saved, updated, deleted, skipped, failed, partial or unavailable states. Diagnostics should identify the affected subsystem, consequence and next action without exposing secrets. Empty states should teach the next step rather than merely show 0 rows.
 
+## Administration CSS and JavaScript
+
+If administration requires plugin-specific CSS or JavaScript, keep reusable/static assets in external plugin-owned files rather than embedding large `<style>` or `<script>` blocks in templates.
+
+Admin-only assets should be loaded only on the plugin's administration routes where practical and must use deterministic cache-busting/versioning so an upgrade does not leave stale browser assets. The installable archive must contain the referenced files.
+
+See [Plugin asset loading and cache versioning](plugin-asset-loading-versioning.md).
+
 ## Responsive and accessible administration
 
 Test navigation wrapping, form widths, tables, long IDs/URLs, action buttons and dialogs on narrow screens. Preserve keyboard operation, visible focus, labels, accessible names for icon-only controls, and status communication that does not rely on color alone.
@@ -85,6 +93,10 @@ Installed help must match the shipped UI. When workflows change, update the Gett
 - [ ] keyboard/focus behavior is usable
 - [ ] help and tooltips are current
 - [ ] no theme framework is required for core administration use
+- [ ] plugin-specific admin CSS/JS is externalized where reusable/static
+- [ ] admin assets are loaded only where needed
+- [ ] admin asset URLs are deterministically versioned
+- [ ] packaged archive contains every referenced admin asset
 
 ## Guiding principle
 
