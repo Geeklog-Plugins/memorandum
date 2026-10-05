@@ -56,6 +56,7 @@ Additional conventions:
 
 - [`plugin-admin-navigation.md`](plugin-admin-navigation.md) — native Geeklog admin-menu usage and the shared fallback contract for persistent plugin-local section navigation.
 - [`plugin-admin-ux-guidelines.md`](plugin-admin-ux-guidelines.md) — administration usability, responsive layout, clear workflows, first-use orientation and concise built-in help.
+- [`plugin-asset-loading-versioning.md`](plugin-asset-loading-versioning.md) — external CSS/JS, contextual loading, deterministic cache-busting and packaging checks.
 - [`plugin-public-design-guidelines.md`](plugin-public-design-guidelines.md) — theme-neutral public design, responsive behavior, accessibility, readable content and robust UI states.
 - [`plugin-seo-public-page-guidelines.md`](plugin-seo-public-page-guidelines.md) — page-level SEO baseline for canonical public plugin resources, metadata, semantic HTML, structured data, containers and sitemap participation.
 - [`plugin-persistent-storage-guide.md`](plugin-persistent-storage-guide.md)
@@ -144,7 +145,15 @@ Do not describe other legacy rendering facilities as removed unless that stateme
 
 ## Assets
 
-Use Geeklog's script and CSS management APIs where they are available and compatible with the supported Geeklog range. Register assets before final document rendering.
+Plugin-owned static CSS and JavaScript should be stored in external files, loaded only in the contexts that need them where practical, and served with a deterministic cache-busting version. Administration assets follow the same rule as public assets.
+
+For header assets, use Geeklog's normal Plugin API integration such as `plugin_getheadercode_PLUGIN()` where it is compatible with the project's supported Geeklog range. Avoid large reusable `<style>` or `<script>` blocks embedded directly in templates.
+
+At minimum, asset URLs should include the plugin release version (for example `admin.css?v=1.2.0`). A plugin version plus file modification timestamp is also acceptable. The version must change when shipped asset content changes; do not use random values that disable caching on every request.
+
+Installable archives must contain every referenced CSS/JS asset, and packaging CI should verify important asset paths. A normal plugin upgrade should not require the administrator to manually clear the browser cache.
+
+See [Plugin asset loading and cache versioning](plugin-asset-loading-versioning.md).
 
 Avoid embedding unescaped PHP values directly into JavaScript. For structured PHP-to-JavaScript data, JSON encoding with appropriate escaping is preferred.
 

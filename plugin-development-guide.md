@@ -50,6 +50,7 @@ See:
 - [Plugin API reference](plugin-api-reference-2.2.2.md)
 - [Configuration migration guide](plugin-configuration-migration-guide-2.2.2.md)
 - [Shared-files upgrade safety](plugin-shared-files-upgrade-safety.md)
+- [Plugin asset loading and cache versioning](plugin-asset-loading-versioning.md)
 - [Multisite development principles](multisite-development-principles.md)
 
 ---
@@ -122,6 +123,10 @@ Common responsibilities:
 - `templates/` — presentation markup;
 - `sql/` — install or migration SQL when appropriate;
 - `css/`, `js/` — plugin-owned assets.
+
+Plugin-owned static assets must not stop at “the file exists”. They should be external files, loaded only on relevant pages/contexts where practical, and use deterministic cache versioning. For administration assets, prefer a clear path such as `admin/css/admin.css` or `css/admin.css`, load it through the normal Geeklog header integration, and verify the asset is present in the packaged ZIP.
+
+See [Plugin asset loading and cache versioning](plugin-asset-loading-versioning.md).
 
 Keep unconditional bootstrap code in `functions.inc` small. Any fatal error there can break every page on which Geeklog loads the plugin.
 
@@ -263,6 +268,61 @@ Where practical, initialization and migration helpers should be idempotent:
 - detect what already exists;
 - do not duplicate records;
 - do not destroy user data to repair a partially initialized state.
+
+## Autoinstall scope: declare plugin globals explicitly
+
+Geeklog 2.1.1 may load plugin files such as `functions.inc` and `install_defaults.php` from inside the core autoinstall function `plugin_do_autoinstall()`.
+
+In PHP, a file included from inside a function inherits that function scope. Plugin variables that normally appear to be global when loaded during standard bootstrap are therefore **not automatically available as globals during autoinstall**.
+
+This can produce failures such as:
+
+```text
+array_merge(): Argument #1 is not an array
+```
+
+when code assumes that a global default/configuration array already exists.
+
+For bootstrap/install files that depend on plugin-owned globals, declare them explicitly before use:
+
+```php
+global $_CONF;
+global $_MYPLUGIN_DEFAULT, $_MYPLUGIN_CONF;
+global $LANG_MYPLUGIN, $LANG_MYPLUGIN_ADMIN;
+```
+
+The same rule applies to any plugin-owned arrays populated by language or configuration files.
+
+Do not rely on `require_once` to solve scope. `require_once` prevents duplicate inclusion, but it does not promote variables into global scope. During autoinstall, it can actually hide the problem if a file was already included in another scope.
+
+Safer pattern:
+
+```php
+global $_CONF, $_MYPLUGIN_DEFAULT, $_MYPLUGIN_CONF;
+global $LANG_MYPLUGIN;
+
+$pluginPath = $_CONF['path'] . 'plugins/myplugin/';
+
+if (!isset($LANG_MYPLUGIN) || !is_array($LANG_MYPLUGIN)) {
+    require $pluginPath . 'language/english.php';
+}
+
+require_once $pluginPath . 'install_defaults.php';
+
+if (!isset($_MYPLUGIN_DEFAULT) || !is_array($_MYPLUGIN_DEFAULT)) {
+    $_MYPLUGIN_DEFAULT = array();
+}
+```
+
+Important distinctions:
+
+- use explicit `global` declarations for plugin-owned state needed during bootstrap/install;
+- guard expected arrays with `isset()` + `is_array()`;
+- do not assume a language/config file included earlier populated the current scope;
+- keep `functions.inc` bootstrap-safe because Geeklog may load it from several lifecycle paths;
+- test the real upload/autoinstall path on Geeklog 2.1.1, not only normal page bootstrap.
+
+A plugin that works after manual file placement can still fail during archive upload if this scope behavior is not tested.
 
 ---
 
@@ -862,6 +922,18 @@ When several Geeklog sites share one plugin directory, deploying new plugin file
 
 New code should remain compatible with the previous supported persisted state until the active site's upgrade is explicitly run.
 
+This requirement also applies to **runtime extension callbacks**. If a plugin is a consumer of `PLG_itemDisplay()`, Item Info, lifecycle hooks, or another shared dispatcher, newly deployed code must not assume that its own database already contains every column introduced by that code. A failure in the consumer can otherwise break an unrelated provider page that merely called the standard Geeklog API correctly.
+
+During a supported transition, keep schema compatibility centralized in the owning plugin's data-access layer:
+
+- detect the actual owned schema when a newer column is optional during the upgrade window;
+- resolve one safe SQL expression/default for each missing field;
+- use that resolved expression consistently throughout the query;
+- degrade gracefully when contextual data cannot be read safely;
+- never push consumer-version checks or consumer-specific workarounds into providers.
+
+The upgrade must still normalize the database to the current schema. Runtime compatibility is a safety boundary, not a substitute for migration.
+
 See:
 
 - [Multisite development principles](multisite-development-principles.md)
@@ -988,6 +1060,66 @@ A useful naming pattern is:
 plugin_VERSION_GEEKLOG.zip
 ```
 
+## Release version names must be stable
+
+When a branch or archive represents a concrete release such as `1.4.0`, the plugin version reported to Geeklog must be exactly that release version:
+
+```text
+1.4.0
+```
+
+Do not publish runtime version names such as:
+
+```text
+1.4.0-dev
+1.4.0-final
+1.4.0-release
+```
+
+unless the project has explicitly adopted a prerelease/versioning scheme that Geeklog and all upgrade logic are designed to understand.
+
+For normal Geeklog plugin releases, keep the canonical version simple and stable across:
+
+- `autoinstall.php` / `pi_version`;
+- `plugin_chkVersion_PLUGIN()`;
+- upgrade comparisons;
+- README/release notes;
+- archive naming;
+- displayed administration metadata.
+
+Development state belongs in branch names, roadmap/status text, issues, milestones, or release notes — **not in the canonical runtime plugin version**.
+
+## Branch discipline: never assume the default branch is the work branch
+
+A repository's default branch (often `main`) is not automatically the branch on which current development must be written.
+
+Before **any repository write**:
+
+1. identify the explicit active development branch from the user's instruction, repository documentation/roadmap, or the already established development context;
+2. verify that the branch exists and fetch the file from that exact ref before editing it;
+3. write back to that same branch unless the user explicitly asks for another target;
+4. do not fall back to the repository default branch merely because a write tool accepts an omitted branch argument.
+
+When a project uses a branch such as:
+
+```text
+develop-1.3.0
+```
+
+all changes intended for that unreleased version belong there. The release/default branch must remain unchanged until the project's normal PR/merge/release process intentionally promotes the work.
+
+This rule applies equally to code, documentation, CI workflows, generated metadata and supporting integration changes in another repository. If work in plugin A requires a corresponding change in plugin B, first resolve plugin B's own active development branch; do not assume both repositories use `main` or the same branch name.
+
+If a change was accidentally written to the wrong branch:
+
+- restore the unintended branch to its pre-change state without carrying unrelated commits backward;
+- reapply the intended change on the correct development branch;
+- verify both branch heads afterward;
+- document the branch mistake if the development guide was not explicit enough to prevent recurrence.
+
+A mismatch such as `1.4.0-dev` in code while the archive is named `plugin_1.4.0_2.1.1.zip` creates unnecessary upgrade ambiguity and can cause false version differences.
+
+
 For repositories supporting multiple Geeklog compatibility artifacts, use an unambiguous convention such as:
 
 ```text
@@ -1003,13 +1135,109 @@ Do not encode a Geeklog version in the filename if the same archive supports the
 
 A release workflow should not merely run tests on the repository and then assume the ZIP is correct.
 
+For Geeklog 2.1.1-compatible packages, the ZIP **must contain one top-level directory whose name is the plugin id**. The plugin files must live inside that directory.
+
+Correct:
+
+```text
+myplugin_1.2.3_2.1.1.zip
+└── myplugin/
+    ├── autoinstall.php
+    ├── functions.inc
+    ├── public_html/
+    ├── admin/
+    ├── language/
+    └── ...
+```
+
+Incorrect:
+
+```text
+myplugin_1.2.3_2.1.1.zip
+├── autoinstall.php
+├── functions.inc
+├── public_html/
+└── ...
+```
+
+This distinction matters because Geeklog 2.1.1 derives the plugin directory name from the archive's first top-level entry. A ZIP may therefore be structurally valid and pass `unzip -t`, yet still be unusable by Geeklog.
+
+A typical failure mode is:
+
+- upload reports success;
+- no installation follows;
+- the plugin does not appear in the list of uninstalled plugins;
+- no useful error is written to the plugin log.
+
+That usually means the archive was unpacked with the wrong top-level layout, so Geeklog never finds:
+
+```text
+plugins/PLUGIN/functions.inc
+plugins/PLUGIN/autoinstall.php
+```
+
 CI should inspect the produced archive and verify:
 
-- expected root directory;
-- required files present;
+- exactly one expected root plugin directory;
+- required files present **under that root directory**;
 - forbidden files absent;
 - PHP syntax of shipped files;
 - archive name/version consistency.
+
+A practical shell check is:
+
+```bash
+PLUGIN="myplugin"
+ARCHIVE="dist/myplugin_1.2.3_2.1.1.zip"
+
+unzip -t "$ARCHIVE"
+
+mapfile -t top_level_entries < <(
+    unzip -Z1 "$ARCHIVE" |
+        sed 's#^\./##' |
+        cut -d/ -f1 |
+        sed '/^$/d' |
+        sort -u
+)
+
+if [ "${#top_level_entries[@]}" -ne 1 ] || [ "${top_level_entries[0]}" != "$PLUGIN" ]; then
+    echo "Invalid Geeklog package layout"
+    exit 1
+fi
+
+for required in \
+    "$PLUGIN/autoinstall.php" \
+    "$PLUGIN/functions.inc" \
+    "$PLUGIN/public_html/index.php"
+do
+    unzip -Z1 "$ARCHIVE" | grep -Fxq "$required" || exit 1
+done
+```
+
+Do not use a packaging command that changes directory into the plugin payload and then runs:
+
+```bash
+zip -r archive.zip .
+```
+
+unless the staging directory itself already contains the required `PLUGIN/` root. Otherwise the plugin files will be written directly at the ZIP root.
+
+A safer staging pattern is:
+
+```text
+STAGE/
+└── myplugin/
+    └── plugin payload
+```
+
+and then:
+
+```bash
+cd "$STAGE"
+zip -r "$ARCHIVE" myplugin
+```
+
+The archive is not considered release-ready until this layout check passes.
 
 ---
 
@@ -1020,6 +1248,10 @@ A plugin should not be called operational until the relevant checks pass.
 ## Definition
 
 - [ ] plugin name and version defined;
+- [ ] release version is canonical and stable (for example `1.4.0`, not `1.4.0-dev`);
+- [ ] runtime version, upgrade version, documentation and archive name are consistent;
+- [ ] every write targeted the explicitly active development branch rather than assuming the repository default branch;
+- [ ] cross-repository supporting changes used each repository's own active development branch;
 - [ ] simplest robust design identified before adding compatibility branches;
 - [ ] one source of truth defined for owned data and behavior;
 - [ ] repeated exceptions reviewed for an underlying contract/design problem;
@@ -1052,6 +1284,10 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] new-install defaults work;
 - [ ] existing-install migration works;
 - [ ] labels/options exist in supported languages;
+- [ ] no user-visible strings hardcoded in PHP/templates/JavaScript;
+- [ ] all referenced language keys exist in every maintained language file;
+- [ ] JavaScript-visible messages are supplied by language data rather than embedded English fallbacks;
+- [ ] at least one non-English public/admin/configuration pass has been tested;
 - [ ] missing configuration does not cause bootstrap fatal errors;
 - [ ] configuration migration is idempotent.
 
@@ -1061,6 +1297,9 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] each important Plugin API callback has one canonical definition;
 - [ ] canonical callback files are loaded on the required runtime paths;
 - [ ] duplicate callback definitions are guarded by CI/source-contract tests where useful;
+- [ ] plugin-owned globals used by `functions.inc` / `install_defaults.php` are explicitly declared for autoinstall scope;
+- [ ] language/config/default arrays are validated before merge/use;
+- [ ] real Geeklog 2.1.1 upload/autoinstall path tested, not only normal bootstrap;
 - [ ] disabled plugin does not leave callable public/admin behavior unintentionally active.
 
 ## Administration
@@ -1108,6 +1347,9 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] Item Info follows the documented return contract;
 - [ ] provider tested through at least one real maintained consumer when one exists;
 - [ ] FAQ association acceptance profile tested when the plugin is expected to host contextual FAQs;
+- [ ] consumers invoked through shared dispatchers tolerate the previous supported/partially migrated state of their own schema without breaking provider pages;
+- [ ] compatibility SQL uses centralized resolved field expressions/defaults consistently and does not later reference a missing new column directly;
+- [ ] manual/contextual relationship placement, when supported, reuses the same ACL, deduplication, inheritance and conflict rules as automatic rendering;
 - [ ] consumers normalize scalar/positional/associative Item Info forms where compatibility requires it;
 - [ ] administration Item Info lookups use the current user's UID when appropriate;
 - [ ] canonical URLs are provider-owned and resolved without hard-coded consumer routing;
@@ -1137,7 +1379,8 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] schema migration tested;
 - [ ] configuration migration tested;
 - [ ] interrupted/repeated upgrade behavior tested;
-- [ ] shared-files compatibility considered.
+- [ ] shared-files compatibility considered;
+- [ ] new runtime code does not require newly added owned-schema columns before the site's upgrade has completed.
 
 ## Compatibility
 
@@ -1160,6 +1403,64 @@ A plugin should not be called operational until the relevant checks pass.
 # 20. Frequent mistakes observed during modernization
 
 These mistakes are especially expensive because they often produce a plugin that looks almost complete while one lifecycle step remains broken.
+
+## Localization and visible-string discipline
+
+User-visible text must not be hardcoded in PHP, templates, or JavaScript.
+
+This applies to all plugin surfaces, including:
+
+- public pages;
+- administration pages and navigation;
+- buttons and form labels;
+- headings and table columns;
+- validation and status messages;
+- AJAX responses displayed to users;
+- JavaScript loading, error and fallback messages;
+- accessibility text such as `aria-label`;
+- Configuration labels, select values, fieldset/tab names and tooltips.
+
+Prefer plugin language arrays as the single source of visible strings. Keep related surfaces separated when useful, for example:
+
+```php
+$LANG_PLUGIN_COMMON
+$LANG_PLUGIN_ADMIN
+$LANG_PLUGIN_RELATIONS
+$LANG_PLUGIN_COVERAGE
+```
+
+Do not keep an English literal in code as a silent fallback for a missing language key. If a supported language does not yet have a native translation for a new key, keep the key contract complete in that language file and use an explicit documented fallback there instead. This avoids hidden English strings spread through application code and prevents `Undefined array key` warnings.
+
+For JavaScript, do not create a second untracked translation system. Pass localized strings from PHP to the script through rendered data, JSON or an equivalent provider-owned mechanism, then let JavaScript consume those values.
+
+Example:
+
+```php
+<select
+  data-msg-loading="<?= htmlspecialchars($LANG_PLUGIN_ADMIN['loading']) ?>"
+  data-msg-error="<?= htmlspecialchars($LANG_PLUGIN_ADMIN['load_error']) ?>">
+```
+
+The corresponding JavaScript should consume these values instead of embedding English text.
+
+### Language parity
+
+Every maintained language file should expose the same functional key contract for the current plugin version.
+
+Before release:
+
+1. collect the language keys actually referenced by PHP/templates/JavaScript;
+2. verify that every referenced key exists in the primary language;
+3. verify that every supported language defines the same required keys;
+4. scan templates and generated HTML for visible hardcoded strings;
+5. scan JavaScript for visible fallback strings that bypass language files;
+6. test at least one non-English language on both public and administration surfaces.
+
+Do not assume that adding one translated file is sufficient. Existing historical language files must also be kept structurally current when new public/admin/configuration keys are introduced.
+
+A practical maintenance rule is:
+
+> **Code consumes language keys; language files own visible wording.**
 
 ## Hardcoded database prefix
 
@@ -1259,6 +1560,19 @@ These mistakes are especially expensive because they often produce a plugin that
 ✅ keep bootstrap minimal and load feature code only where needed
 ```
 
+## Assuming top-level scope during autoinstall
+
+```text
+❌ assume $_PLUGIN_DEFAULT / language arrays are global because normal bootstrap works
+❌ rely on require_once to make included variables globally visible
+
+✅ declare plugin-owned globals explicitly
+✅ validate arrays before array_merge() or indexed access
+✅ test the actual Geeklog 2.1.1 upload/autoinstall path
+```
+
+Geeklog 2.1.1 can include plugin files from inside `plugin_do_autoinstall()`, so those files inherit function scope. A plugin may therefore work during normal requests but fail only while being installed from an uploaded archive.
+
 ## Upgrade assumes all multisite databases are synchronized
 
 ```text
@@ -1272,6 +1586,44 @@ These mistakes are especially expensive because they often produce a plugin that
 ❌ trust the repository build because tests passed before ZIP creation
 ✅ inspect and validate the actual generated archive in CI
 ```
+
+## Shipping development suffixes as the release version
+
+```text
+❌ pi_version = 1.4.0-dev
+❌ archive says 1.4.0 while runtime reports 1.4.0-dev
+
+✅ pi_version = 1.4.0
+✅ keep development status in branch/roadmap/release notes
+```
+
+The canonical runtime version should describe the release identity, not the development state of the branch.
+
+## Packaging files directly at the ZIP root
+
+```text
+❌ archive.zip/autoinstall.php
+❌ archive.zip/functions.inc
+
+✅ archive.zip/PLUGIN/autoinstall.php
+✅ archive.zip/PLUGIN/functions.inc
+```
+
+Geeklog 2.1.1 derives the plugin name from the first top-level archive entry. A flat ZIP can therefore report a successful upload while never becoming installable.
+
+## Consumer extension callback assumes its newest schema
+
+```text
+❌ PLG_itemDisplay() callback unconditionally queries newly added relation columns before every supported installation has migrated
+❌ fix each affected provider with a provider-specific bypass
+
+✅ keep schema compatibility inside the consuming plugin
+✅ detect the owned schema once through a centralized helper
+✅ use safe defaults/resolved SQL expressions during the supported transition
+✅ let the normal upgrade converge the schema to the current version
+```
+
+A correctly implemented provider should not need to know whether FAQ, Hub, or another consumer has finished migrating its private relation tables.
 
 ## Fixing symptoms with compatibility patches everywhere
 
@@ -1365,6 +1717,7 @@ Use this guide as the starting point, then move to the detailed references when 
 | Configuration contextual help/tooltips | [plugin-configuration-tooltips.md](plugin-configuration-tooltips.md) |
 | Admin menus and local section navigation | [plugin-admin-navigation.md](plugin-admin-navigation.md) |
 | Administration usability and first-use help | [plugin-admin-ux-guidelines.md](plugin-admin-ux-guidelines.md) |
+| CSS/JS loading, cache-busting and packaged assets | [plugin-asset-loading-versioning.md](plugin-asset-loading-versioning.md) |
 | Public design, responsive behavior and accessibility | [plugin-public-design-guidelines.md](plugin-public-design-guidelines.md) |
 | Public page SEO baseline | [plugin-seo-public-page-guidelines.md](plugin-seo-public-page-guidelines.md) |
 | Persistent files | [plugin-persistent-storage-guide.md](plugin-persistent-storage-guide.md) |

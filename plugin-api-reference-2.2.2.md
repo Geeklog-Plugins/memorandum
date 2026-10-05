@@ -79,6 +79,8 @@ For `plugin_centerblock_<plugin>()`, `$where` may be:
 | `plugin_getmetatags_<plugin>()` | Adds metadata to a page | `$type, $id` |
 | `plugin_getstructureddatatypes_<plugin>()` | Declares Structured Data types supported by the plugin | None |
 
+For `plugin_getheadercode_<plugin>()`, static CSS/JS should normally be referenced as external plugin-owned files. Plugins should avoid loading admin-only assets on unrelated pages and should add deterministic cache-busting to shipped asset URLs. See [Plugin asset loading and cache versioning](plugin-asset-loading-versioning.md).
+
 Known `$templateName` values include:
 
 ```text
