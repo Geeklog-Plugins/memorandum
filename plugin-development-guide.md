@@ -1,3 +1,5 @@
+> **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](geeklog-runtime-support-policy.md).
+
 # Geeklog Plugin Development Guide
 
 A practical, end-to-end guide for building a Geeklog plugin that is installable, activatable, deactivatable, configurable, administrable, publicly usable, upgradeable, packageable, and compliant with the current Memorandum development expectations.
@@ -33,15 +35,15 @@ A useful warning sign is:
 
 > **Three exceptions to the same rule usually mean the shared design should be revisited.**
 
-Compatibility code is sometimes necessary, especially across Geeklog 2.1.1–2.2.2, but it should be narrow, documented, testable, and removable when the compatibility boundary disappears.
+Compatibility code is sometimes necessary, especially across Geeklog 2.2.2+, but it should be narrow, documented, testable, and removable when the compatibility boundary disappears.
 
 
 ## Current compatibility baseline
 
 Unless a plugin repository explicitly defines another policy, the current modernization target is:
 
-- Geeklog 2.1.1 through 2.2.2;
-- PHP 5.6 through PHP 8.1.
+- Geeklog 2.2.2 and later;
+- PHP 5.6.40 through PHP 8.1 (and later supported versions).
 
 New code must therefore use the common safe PHP subset required by that range and must not assume that every Geeklog 2.2.2 facility exists unchanged in Geeklog 2.1.1.
 
@@ -522,7 +524,7 @@ The page should:
 - behave correctly for logged-in users;
 - avoid direct dependence on a specific theme.
 
-For the current Geeklog 2.1.1–2.2.2 compatibility range, modernized full pages should use `COM_createHTMLDocument()`, not legacy `COM_siteHeader()` / `COM_siteFooter()` rendering.
+For the current Geeklog 2.2.2+ compatibility range, modernized full pages should use `COM_createHTMLDocument()`, not legacy `COM_siteHeader()` / `COM_siteFooter()` rendering.
 
 ## Public design, usability and SEO
 
