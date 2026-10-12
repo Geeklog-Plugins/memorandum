@@ -1,3 +1,5 @@
+> **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](geeklog-runtime-support-policy.md).
+
 # Geeklog plugin metadata manifest
 
 ## Status
@@ -39,8 +41,8 @@ A fuller form can expose an icon and minimum runtime requirements:
   "name": "Maps",
   "icon": "admin/images/maps.png",
   "requires": {
-    "geeklog": "2.1.1",
-    "php": "5.6.0"
+    "geeklog": "2.2.2",
+    "php": "5.6.40"
   }
 }
 ```
@@ -179,8 +181,8 @@ with Geeklog 2.1.1 and PHP 5.6.0 as its maintained minimum requirements, then th
   "name": "Maps",
   "icon": "admin/images/maps.png",
   "requires": {
-    "geeklog": "2.1.1",
-    "php": "5.6.0"
+    "geeklog": "2.2.2",
+    "php": "5.6.40"
   }
 }
 ```
@@ -197,8 +199,8 @@ An icon is recommended but not mandatory. If a plugin has no reliable administra
   "id": "amazonlinks",
   "name": "Amazon Links",
   "requires": {
-    "geeklog": "2.1.1",
-    "php": "5.6.0"
+    "geeklog": "2.2.2",
+    "php": "5.6.40"
   }
 }
 ```
