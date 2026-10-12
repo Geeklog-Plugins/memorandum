@@ -28,6 +28,7 @@ These documents describe APIs and behavior that exist in Geeklog itself.
 
 - [`plugin-api-reference-2.2.2.md`](plugin-api-reference-2.2.2.md) — reference to the Geeklog 2.2.2 Plugin API.
 - [`plugin-configuration-migration-guide-2.2.2.md`](plugin-configuration-migration-guide-2.2.2.md) — configuration and upgrade lessons observed while modernizing plugins for Geeklog 2.2.2.
+- [`geeklog-2.1.1-to-2.2.2-multisite-upgrade-lessons.md`](geeklog-2.1.1-to-2.2.2-multisite-upgrade-lessons.md) — historical field guide from a 15-site shared-Core migration: backups, schema/version mismatches, optional plugins, partial failures, recovery and post-upgrade verification.
 
 These references describe the newer end of the supported range. When maintaining compatibility with Geeklog 2.1.1, plugins and themes must verify that an API or theme capability exists before relying on it or provide a compatible fallback.
 
