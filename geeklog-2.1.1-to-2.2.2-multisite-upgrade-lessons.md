@@ -202,3 +202,7 @@ These are **recommendations learned from this deployment**, not a claim that cur
 - [Plugin configuration migration to Geeklog 2.2.2](plugin-configuration-migration-guide-2.2.2.md)
 - [Persistent plugin storage](plugin-persistent-storage-guide.md)
 - [Current runtime support policy](geeklog-runtime-support-policy.md)
+
+## 8. Proposed maintenance architecture
+
+The historical lessons inform a separate proposal for future upgrade and legacy-SQL recovery. See [Geeklog Install / Upgrade / Rescue architecture](geeklog-installer-upgrade-rescue-architecture.md). The guide above records observed incidents; proposed features must not be mistaken for implemented functionality.
