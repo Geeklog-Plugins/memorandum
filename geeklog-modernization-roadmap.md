@@ -1,3 +1,5 @@
+> **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](geeklog-runtime-support-policy.md).
+
 # Geeklog Modernization Roadmap
 
 This roadmap focuses on the current implementation priorities for the Geeklog ecosystem.
@@ -6,12 +8,12 @@ This roadmap focuses on the current implementation priorities for the Geeklog ec
 
 For plugins and the Eclipse theme currently being modernized, the priority is to preserve compatibility across:
 
-- **Geeklog 2.1.1 through 2.2.2**
-- **PHP 5.6 through PHP 8.1**
+- **Geeklog 2.2.2 and later**
+- **PHP 5.6.40 through PHP 8.1 (and later supported versions)**
 
 This allows plugins and Eclipse to be adopted before or during a staged Geeklog/PHP migration.
 
-Modernization should therefore use the safe common subset of PHP 5.6–8.1 and isolate Geeklog-version compatibility code where newer APIs or theme capabilities are not available in Geeklog 2.1.1.
+Modernization should therefore use the safe common subset of PHP 5.6.40–8.1+ and isolate Geeklog-version compatibility code where newer APIs or theme capabilities are not available in Geeklog 2.1.1.
 
 ---
 
@@ -24,8 +26,8 @@ Modernization should therefore use the safe common subset of PHP 5.6–8.1 and i
 ### Priorities
 - Finalize configuration defaults for new installations and upgrades.
 - Complete the admin menu preview.
-- Fix remaining Geeklog 2.1.1–2.2.2 compatibility issues.
-- Keep PHP 5.6–8.1 compatibility.
+- Fix remaining Geeklog 2.2.2+ compatibility issues.
+- Keep PHP 5.6.40–8.1+ compatibility.
 - Improve the optional integration with Eclipse.
 - Define clean and reusable navigation output for themes.
 - Avoid making the plugin dependent on one specific theme.
@@ -43,7 +45,7 @@ Modernization should therefore use the safe common subset of PHP 5.6–8.1 and i
 - Ensure safe and isolated storage for multisite installations.
 - Confirm that upgrades are non-destructive and repeatable.
 - Keep packaging and migration tests reliable.
-- Validate behavior on Geeklog 2.1.1 and 2.2.2.
+- Validate behavior on Geeklog 2.2.2.
 - Validate PHP 5.6 and PHP 8.1 compatibility.
 
 ## 3. Maps
@@ -59,18 +61,18 @@ Modernization should therefore use the safe common subset of PHP 5.6–8.1 and i
 - Validate the synchronized plugin before new development.
 - Modernize Google Maps integration for current APIs.
 - Improve security and search behavior.
-- Preserve Geeklog 2.1.1–2.2.2 compatibility where practical.
-- Preserve PHP 5.6–8.1 compatibility.
+- Preserve Geeklog 2.2.2+ compatibility where practical.
+- Preserve PHP 5.6.40–8.1+ compatibility.
 
 ## 4. Eclipse Theme
 
 **Status:** Active
 
-**Goal:** make Eclipse a modern reference theme that can be adopted across Geeklog 2.1.1–2.2.2 installations.
+**Goal:** make Eclipse a modern reference theme that can be adopted across Geeklog 2.2.2+ installations.
 
 ### Priorities
-- Provide native support for Geeklog 2.1.1 through 2.2.2.
-- Preserve PHP 5.6 through PHP 8.1 compatibility.
+- Provide native support for Geeklog 2.2.2 and later.
+- Preserve PHP 5.6.40 through PHP 8.1 (and later supported versions) compatibility.
 - Use version-aware compatibility layers where Geeklog 2.2.2 introduces theme APIs or rendering behavior not present in Geeklog 2.1.1.
 - Avoid splitting Eclipse into incompatible legacy and modern editions where a clean compatibility layer can solve the difference.
 - Stabilize the integration with Menu.
@@ -97,8 +99,8 @@ Eclipse should remain a reference implementation rather than a mandatory depende
 - Improve installation and upgrade reliability.
 - Validate the product management workflow.
 - Continue testing with realistic demo products.
-- Preserve Geeklog 2.1.1–2.2.2 compatibility while the migration policy remains active.
-- Preserve PHP 5.6–8.1 compatibility.
+- Preserve Geeklog 2.2.2+ compatibility while the migration policy remains active.
+- Preserve PHP 5.6.40–8.1+ compatibility.
 - Keep interfaces extensible enough for future interoperability without implementing unfinished future architecture now.
 - Avoid making other major projects depend on Store until it is stable.
 
@@ -113,8 +115,8 @@ Eclipse should remain a reference implementation rather than a mandatory depende
 - Use a site-specific storage path compatible with multisite.
 - Validate migration from existing installations.
 - Review security and file handling.
-- Preserve Geeklog 2.1.1–2.2.2 compatibility.
-- Preserve PHP 5.6–8.1 compatibility.
+- Preserve Geeklog 2.2.2+ compatibility.
+- Preserve PHP 5.6.40–8.1+ compatibility.
 - Complete functional tests before adding new features.
 
 ## 7. Multisite Manager

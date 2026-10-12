@@ -6,18 +6,15 @@ A practical reference for modernizing Geeklog plugins and themes today while pre
 
 ## Current compatibility priority
 
-For **plugins and the Eclipse theme currently being modernized**, the working compatibility target is:
+**Effective baseline for newly maintained Geeklog plugins and themes (October 2026):**
 
-- **Geeklog 2.1.1 through 2.2.2**
-- **PHP 5.6 through PHP 8.1**
+- **Geeklog 2.2.2 minimum.** Geeklog 2.1.1 is no longer a supported runtime target.
+- **PHP 5.6.40 minimum.** Maintain PHP 5.6-compatible syntax and test with PHP 5.6 and PHP 8.1/8.3 when supported by the project.
+- Preserve upgrades from older installed plugin data; removing support for older Geeklog runtimes must not discard historical persisted state.
+- Multisite deployments with shared files must support staggered plugin-data upgrades across sites running Geeklog 2.2.2.
+- Cookie Consent does not manage Google AdSense. Google's separate consent/ad tooling stays independently configured; never imply that loading AdSense alone ensures compliant consent.
 
-This compatibility range is intentional. It allows existing Geeklog sites to adopt modernized plugins and Eclipse before or during a staged migration to Geeklog 2.2.2 and newer PHP versions.
-
-New code should therefore avoid introducing syntax or runtime requirements that prevent PHP 5.6 compatibility unless a project explicitly changes its own support policy.
-
-The longer-term architecture described in this repository may target Geeklog 2.2.2 and PHP 8.1+ once the migration period is complete. Future targets must not be confused with the compatibility requirements of projects being modernized today.
-
----
+See [current runtime support policy](geeklog-runtime-support-policy.md). Historical plans and completed migration notes below may still describe previous compatibility goals; they are not the current maintenance baseline.
 
 ## How to read this repository
 
@@ -79,7 +76,7 @@ The present order is:
 
 The **Plugin Toolkit is on hold**.
 
-Eclipse follows the same transition objective as the modernized plugins: native support for Geeklog 2.1.1 through 2.2.2 and PHP 5.6 through 8.1. This broader compatibility is intended to make Eclipse adoptable by existing sites before they complete a Geeklog or PHP migration.
+Eclipse follows the same transition objective as the modernized plugins: native support for Geeklog 2.2.2 and later and PHP 5.6.40 through 8.1 and later supported versions. This broader compatibility is intended to make Eclipse adoptable by existing sites before they complete a Geeklog or PHP migration.
 
 ### 4. Future architecture
 
@@ -92,7 +89,7 @@ These documents describe direction and proposed contracts. They are not claims a
 - [`geeklog-2030-roadmap.md`](geeklog-2030-roadmap.md)
 - [`geeklog-marketing-roadmap-2027-2030.md`](geeklog-marketing-roadmap-2027-2030.md)
 
-For modernized content plugins such as **Maps, Documents, Videos and Store**, the interoperability baseline should now be considered during implementation, not postponed until Hub is complete. The recommended baseline is structured Item Info exposure, collection retrieval where appropriate, lifecycle event emission, and URL resolution with compatibility fallbacks across Geeklog 2.1.1–2.2.2.
+For modernized content plugins such as **Maps, Documents, Videos and Store**, the interoperability baseline should now be considered during implementation, not postponed until Hub is complete. The recommended baseline is structured Item Info exposure, collection retrieval where appropriate, lifecycle event emission, and URL resolution with compatibility fallbacks across Geeklog 2.2.2+.
 
 The long-term principle is:
 
@@ -114,9 +111,9 @@ For projects keeping the current compatibility policy:
 - normalize values before passing them to native functions whose PHP 8 behavior is stricter;
 - avoid assumptions that only work because older PHP versions silently tolerated invalid input.
 
-Compatibility is not achieved by writing old-style code. It is achieved by using the common safe subset of PHP 5.6–8.1 and testing both ends of the range.
+Compatibility is not achieved by writing old-style code. It is achieved by using the common safe subset of PHP 5.6.40–8.1+ and testing both ends of the range.
 
-## Geeklog 2.1.1 through 2.2.2
+## Geeklog 2.2.2 and later
 
 A modernized project should not assume every Geeklog 2.2.2 facility exists in 2.1.1.
 
@@ -133,7 +130,7 @@ Eclipse itself should provide version-aware compatibility layers where Geeklog 2
 
 ## Rendering
 
-For plugins targeting the current transition baseline **Geeklog 2.1.1 through 2.2.2**, use `COM_createHTMLDocument()` for complete-page rendering. It is available in the supported range and is the common rendering path across these versions.
+For plugins targeting the current transition baseline **Geeklog 2.2.2 and later**, use `COM_createHTMLDocument()` for complete-page rendering. It is available in the supported range and is the common rendering path across these versions.
 
 Do not build or retain modernized plugin pages around `COM_siteHeader()` / `COM_siteFooter()`. These legacy functions are not available in Geeklog 2.2.x and can therefore produce fatal errors or completely blank pages when a plugin that still uses them is opened under Geeklog 2.2.2.
 
@@ -157,7 +154,7 @@ See [Plugin asset loading and cache versioning](plugin-asset-loading-versioning.
 
 Avoid embedding unescaped PHP values directly into JavaScript. For structured PHP-to-JavaScript data, JSON encoding with appropriate escaping is preferred.
 
-Eclipse and plugins should account for differences in asset handling between Geeklog 2.1.1 and 2.2.2 instead of assuming only the newer path.
+Eclipse and plugins should account for differences in asset handling between Geeklog 2.2.2 instead of assuming only the newer path.
 
 ## Database access
 

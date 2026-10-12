@@ -1,3 +1,5 @@
+> **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](geeklog-runtime-support-policy.md).
+
 # Geeklog Plugin Development Guide
 
 A practical, end-to-end guide for building a Geeklog plugin that is installable, activatable, deactivatable, configurable, administrable, publicly usable, upgradeable, packageable, and compliant with the current Memorandum development expectations.
@@ -33,15 +35,15 @@ A useful warning sign is:
 
 > **Three exceptions to the same rule usually mean the shared design should be revisited.**
 
-Compatibility code is sometimes necessary, especially across Geeklog 2.1.1–2.2.2, but it should be narrow, documented, testable, and removable when the compatibility boundary disappears.
+Compatibility code is sometimes necessary, especially across Geeklog 2.2.2+, but it should be narrow, documented, testable, and removable when the compatibility boundary disappears.
 
 
 ## Current compatibility baseline
 
 Unless a plugin repository explicitly defines another policy, the current modernization target is:
 
-- Geeklog 2.1.1 through 2.2.2;
-- PHP 5.6 through PHP 8.1.
+- Geeklog 2.2.2 and later;
+- PHP 5.6.40 through PHP 8.1 (and later supported versions).
 
 New code must therefore use the common safe PHP subset required by that range and must not assume that every Geeklog 2.2.2 facility exists unchanged in Geeklog 2.1.1.
 
@@ -522,7 +524,7 @@ The page should:
 - behave correctly for logged-in users;
 - avoid direct dependence on a specific theme.
 
-For the current Geeklog 2.1.1–2.2.2 compatibility range, modernized full pages should use `COM_createHTMLDocument()`, not legacy `COM_siteHeader()` / `COM_siteFooter()` rendering.
+For the current Geeklog 2.2.2+ compatibility range, modernized full pages should use `COM_createHTMLDocument()`, not legacy `COM_siteHeader()` / `COM_siteFooter()` rendering.
 
 ## Public design, usability and SEO
 
@@ -860,6 +862,14 @@ When implementing a callback:
 2. inspect existing working core/plugin implementations when necessary;
 3. test the callback through Geeklog, not only by calling your function directly.
 
+## Provider-side Item Info compatibility rule
+
+Modernized content providers (including Documents, Videos, Maps, FAQ, Downloads and future plugins) **must return a scalar for a single requested property on one concrete item**: `PLG_getItemInfo('PLUGIN', $id, 'url', $uid)` should return a URL string, not `array($url)` or `array('url' => $url)`. Native Geeklog's What's New comments block uses the result directly as a string; array returns can trigger `Array to string conversion`. Missing/inaccessible items must return a safe empty scalar for these single-field requests.
+
+Keep multi-property concrete-item results ordered and keep wildcard `'*'` collections structured, even for a one-field collection query. Do not apply single-property flattening to collections.
+
+Before marking a provider release-ready, test through **Geeklog's dispatcher**: scalar `'url'` and `'title'` lookups; ordered `'id,title,url'` lookup; `'*'` collection; missing/inaccessible IDs; and a public What's New block containing plugin comments. Consumer-side legacy shape normalization remains required separately. See [Plugin content interoperability contract](plugin-content-interoperability-contract.md#single-property-compatibility-with-native-geeklog-consumers).
+
 ## Normalize historical Item Info return shapes at consumer boundaries
 
 Across older and modernized plugins, a concrete Item Info request may be encountered as:
@@ -1182,7 +1192,31 @@ CI should inspect the produced archive and verify:
 - required files present **under that root directory**;
 - forbidden files absent;
 - PHP syntax of shipped files;
-- archive name/version consistency.
+- archive name/version consistency;
+- at least one critical runtime file extracted from the ZIP is byte-for-byte identical to the source file from the commit being packaged.
+
+For higher confidence, compare several critical files, especially files that control plugin bootstrap, installation, upgrades, and core runtime behavior, for example:
+
+- `autoinstall.php`;
+- `functions.inc`;
+- `include/functions.php`;
+- the plugin's main class or service file.
+
+A release workflow must validate the **actual extracted ZIP payload**, not only the staging directory or repository tree. This catches stale archives, incorrect staging roots, omitted files, and packaging workflows that accidentally publish code from an older commit.
+
+A practical pattern is:
+
+```bash
+rm -rf verify
+mkdir verify
+unzip -q "$ARCHIVE" -d verify
+
+cmp -s "autoinstall.php" "verify/$PLUGIN/autoinstall.php"
+cmp -s "functions.inc" "verify/$PLUGIN/functions.inc"
+cmp -s "include/functions.php" "verify/$PLUGIN/include/functions.php"
+```
+
+If any comparison fails, the distribution job must fail. Do not publish the ZIP.
 
 A practical shell check is:
 

@@ -82,6 +82,33 @@ The exact property set may vary by plugin, but commonly useful names should be k
 
 `hits` is the recommended canonical field for a persisted per-item view counter when the plugin maintains one. A plugin may use another internal column name, but consumers should not need to know that implementation detail.
 
+## Single-property compatibility with native Geeklog consumers
+
+**Provider contract:** For a concrete item ID (not `'*'`), when `$what` requests exactly one property, return its **scalar value** (for example a URL string for `'url'`, a title string for `'title'`, or an empty string when unavailable). Do not return a one-element numeric or associative array. This preserves compatibility with native Geeklog 2.1.1/2.2.2 consumers, including the What's New comments renderer, which concatenates `PLG_getItemInfo($type, $id, 'url')` directly with `'#comments'`. Returning an array produces an *Array to string conversion* warning.
+
+For multiple requested properties on a concrete item, preserve the ordered positional result expected by existing Geeklog callers. For `$id === '*'`, retain the established **collection of records** contract, including when the collection requests one property; do not flatten collections into a scalar.
+
+**Consumer compatibility:** Modern consumers (FAQ, Hub, Hello, Documents, Videos, Maps and other integrations) must continue accepting legacy single-property results in scalar, numeric-array and associative-array forms. This tolerance exists for older providers and **does not remove the scalar requirement for newly modernized providers**. Normalize at the consumer boundary rather than weakening native compatibility.
+
+Provider acceptance tests (run through the real `PLG_getItemInfo` dispatcher under appropriate permissions):
+
+```php
+$url = PLG_getItemInfo('PLUGIN', $publicId, 'url', $uid);
+$title = PLG_getItemInfo('PLUGIN', $publicId, 'title', $uid);
+assert(is_string($url) && $url !== '');
+assert(is_string($title));
+assert(is_string($url . '#comments'));
+
+$fields = PLG_getItemInfo('PLUGIN', $publicId, 'id,title,url', $uid);
+assert(is_array($fields) && count($fields) === 3);
+assert($fields[2] === $url);
+
+$items = PLG_getItemInfo('PLUGIN', '*', 'id,title,url', $uid);
+assert(is_array($items)); // Collection remains structured
+```
+
+Additionally, exercise a real public page with new comments in the native **What's New** block, and verify there are no PHP warnings. Repeat single-property checks for roots/categories and for inaccessible or missing items when the plugin supports those identities, verifying no restricted metadata leaks. Keep separate regression tests for legacy consumers accepting array-shaped responses.
+
 ## Why this matters
 
 A consumer should be able to request content metadata without accessing plugin tables directly.
@@ -827,6 +854,35 @@ None detected         = neither path is available
 This distinction matters because implementing `plugin_getiteminfo_*()` with collection support already makes a content plugin useful to XMLSitemap even when it does not implement the specialized sitemap collector.
 
 The specialized collector remains preferable when sitemap-specific behavior, permissions, filtering, priorities, or performance considerations justify it.
+
+### Native sitemap collector requirements
+
+When a plugin implements `plugin_collectSitemapItems_PLUGIN($uid, $limit)`, the callback should be treated as the canonical sitemap-oriented view of the plugin's public content.
+
+The collector should:
+
+- return only public, indexable, provider-owned canonical GET URLs;
+- never return wildcard, placeholder, session-dependent, POST-only, or generic collection URLs such as `id=*` or `s=*`;
+- deduplicate URLs before returning them, including content that can belong to multiple containers or relationships;
+- apply anonymous/public permission rules consistently with the plugin's normal frontend access model;
+- exclude hidden, disabled, unpublished, unreleased, expired, or otherwise non-indexable resources;
+- distinguish addressable containers from leaf items when both are intended to be indexed, for example plugin root, category/album, and individual item;
+- provide `date-modified`, `change-freq`, and `priority` when the plugin has meaningful sitemap-specific values for them;
+- honor the `$limit` parameter without returning duplicate entries;
+- avoid relying on UI state or generic collection behavior when a dedicated sitemap query can provide a safer and more deterministic result;
+- remain safe during plugin lifecycle transitions. In particular, XMLSitemap may be invoked from a plugin state-change callback before Geeklog has refreshed `$_PLUGINS`. A collector must not assume that the plugin is already fully reflected in the enabled-plugin runtime state during that transient window.
+
+For content that can appear in more than one container, one canonical resource URL should normally be emitted once. Container pages may be emitted separately only when they are themselves stable, public, indexable resources.
+
+Example hierarchy:
+
+```text
+plugin root
+  -> category / album / container
+     -> individual content item
+```
+
+The native collector should not merely expose every row returned by an internal relationship join. It should expose the canonical sitemap representation of the provider's public content.
 
 Lifecycle notifications complement this collection contract: XMLSitemap may listen to `PLG_itemSaved()` and `PLG_itemDeleted()` to know when tracked content changes, while the collector or Item Info interface remains responsible for supplying the addressable content itself.
 

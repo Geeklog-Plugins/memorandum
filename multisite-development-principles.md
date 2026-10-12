@@ -1,3 +1,5 @@
+> **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](geeklog-runtime-support-policy.md).
+
 # Geeklog Multisite Development Principles
 
 ## Purpose
@@ -6,8 +8,8 @@ Multisite support is a development constraint that applies now, even though a de
 
 Current plugin modernization should remain compatible with:
 
-- **Geeklog 2.1.1 through 2.2.2**
-- **PHP 5.6 through PHP 8.1**
+- **Geeklog 2.2.2 and later**
+- **PHP 5.6.40 through PHP 8.1 (and later supported versions)**
 
 ## Core principle
 
@@ -132,7 +134,7 @@ The full policy, implementation patterns and release checklist are defined in [`
 
 ## Compatibility layer
 
-Current plugins may need compatibility code because Geeklog 2.1.1 and 2.2.2 do not expose exactly the same facilities.
+Current plugins may need compatibility code because Geeklog 2.2.2 do not expose exactly the same facilities.
 
 Keep compatibility logic isolated where practical.
 
