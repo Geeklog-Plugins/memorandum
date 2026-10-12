@@ -5,7 +5,6 @@
 - PHP **5.6.40** remains the minimum supported PHP runtime. Write syntax compatible with PHP 5.6, and validate on 5.6 and maintained PHP 8.x versions; PHP 8.1 and 8.3 are useful test targets. Do not confuse the Geeklog minimum with a PHP 8.1 minimum.
 - Update native install metadata, compatibility callbacks, plugin.json, CI, README and release notes consistently when applying this policy.
 - Continue preserving historical plugin configuration and persistent state during upgrades even though old Geeklog Core runtime support has ended. Shared-files multisite staggered upgrades must be safe across Geeklog 2.2.2 sites.
-- Keep Google AdSense and Google's own ad-consent setup outside Cookie Consent integration scope unless a project explicitly requests it. Do not disable, wrap or rewrite AdSense tags on behalf of Cookie Consent. This separation does not establish regulatory compliance; each site remains responsible for appropriate consent tooling.
 - Do not change historical release notes to imply a previously shipped release supported a different runtime. Historical migration guides may document Geeklog 2.1.1 but must clearly separate that history from the active baseline.
 
 ## Release gate
