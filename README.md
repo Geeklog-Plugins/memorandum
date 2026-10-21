@@ -4,6 +4,16 @@
 
 A practical reference for modernizing Geeklog plugins and themes today while preparing a cleaner architecture for the future.
 
+## Shared IA architecture — decision of 13 October 2026
+
+- **Agent** remains the provider-neutral machine access layer: authorized external reading and future actions. It is not the AI model invocation engine or a workflow scheduler.
+- **IA (proposed independent plugin)** receives generation requests from Geeklog plugins (including Automation and Forum), connects to different AI providers, normalizes text/image/structured responses, tracks usage, errors and quotas, and returns results to its caller.
+- **Automation** orchestrates steps, conditions, scheduling, approvals and retries of full workflows. Automation must remain useful without IA for non-AI tasks.
+- **Hub** owns editorial relationships and context; Core and feature plugins own their data, permissions and business actions.
+- Before implementing IA, **audit existing LLM-related code and documentation inside the [Agent repository](https://github.com/hostellerie/agent)** to identify what can be reused or extracted safely. There is **no separate LLM repository**. Do not remove working Agent features or migrate code without tests.
+- Agree on shared service/capability contracts, site isolation, credentials, permission checks, sync/async job boundaries and two consumer tests (Automation and Forum). Avoid competing provider integrations and duplicate queues.
+- This design is a proposal in documentation, not an implemented or released IA plugin.
+
 ## Current compatibility priority
 
 **Effective baseline for newly maintained Geeklog plugins and themes (October 2026):**
@@ -28,6 +38,8 @@ These documents describe APIs and behavior that exist in Geeklog itself.
 
 - [`plugin-api-reference-2.2.2.md`](plugin-api-reference-2.2.2.md) — reference to the Geeklog 2.2.2 Plugin API.
 - [`plugin-configuration-migration-guide-2.2.2.md`](plugin-configuration-migration-guide-2.2.2.md) — configuration and upgrade lessons observed while modernizing plugins for Geeklog 2.2.2.
+- [`geeklog-2.1.1-to-2.2.2-multisite-upgrade-lessons.md`](geeklog-2.1.1-to-2.2.2-multisite-upgrade-lessons.md) — historical field guide from a 15-site shared-Core migration: backups, schema/version mismatches, optional plugins, partial failures, recovery and post-upgrade verification.
+- [`geeklog-installer-upgrade-rescue-architecture.md`](geeklog-installer-upgrade-rescue-architecture.md) — proposed division of responsibilities between Monitor, Migrator SQL recovery, and native Geeklog Install/Upgrade/Rescue.
 
 These references describe the newer end of the supported range. When maintaining compatibility with Geeklog 2.1.1, plugins and themes must verify that an API or theme capability exists before relying on it or provide a compatible fallback.
 

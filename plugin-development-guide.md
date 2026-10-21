@@ -85,6 +85,33 @@ A useful initial question is:
 
 ---
 
+## Mandatory source headers and function documentation
+
+Every new or modified Geeklog plugin source file must carry a consistent, readable **file header**. This applies to PHP files (including `functions.inc`, `autoinstall.php`, `admin/*.php`, `sql/*.php`), and to CSS/JavaScript files with a comment syntax appropriate to their language. Follow established Geeklog plugin conventions, for example [SearchRank autoinstall.php](https://github.com/hostellerie/searchrank/blob/develop-1.2.4/autoinstall.php).
+
+The header should document:
+
+- plugin name and current version, file path and concise responsibility;
+- copyright year(s), actual author(s) and contact in the project's agreed spelling/obfuscation;
+- license identifier and rights notice **consistent with the repository's actual LICENSE** (do not assume GPL for repositories with another license);
+- compatibility or security constraints if relevant, without claiming unsupported behavior.
+
+**Every named PHP function and Plugin API callback needs a nearby PHPDoc block** explaining its purpose, each argument (`@param`), and the return value (`@return`). Mention side effects, permission checks, database writes and failure behavior where important. Use types compatible with the plugin's supported PHP versions. Internal helper functions are not exempt, even in a small pilot.
+
+For SQL-only installation scripts, add a descriptive file header and explain owned tables; don't fabricate function documentation. For CSS, document the stylesheet's scope and important security/accessibility choices in a CSS comment.
+
+### Review checklist before a pre-release or upgrade
+
+1. Inspect all runtime PHP and static assets in the **actual installable archive**, not only the repository.
+2. Confirm each PHP source file has the agreed header and every function has purpose, parameter and return documentation.
+3. Keep source/version/author/license metadata consistent without overwriting historical copyright attribution.
+4. Lint on the supported PHP matrix and verify documentation-only edits did not alter behavior.
+5. Do not describe the documentation audit as successful if any shipped file is missing the required documentation.
+
+This applies to maintenance and upgrades as well as initial development, and is part of the release gate.
+
+---
+
 # 2. Create the minimum plugin structure
 
 A typical plugin should have a structure comparable to:
