@@ -834,7 +834,7 @@ without changing the owning plugin.
 
 Current modernization target remains:
 
-- Geeklog 2.1.1 through 2.2.2;
+- Geeklog 2.2.2 and later;
 - PHP 5.6 through PHP 8.1 unless a project explicitly broadens its tested range.
 
 The capability contract must therefore:

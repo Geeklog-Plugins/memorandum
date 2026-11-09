@@ -346,8 +346,8 @@ A hostname switch hard-coded in Agent should not be required for normal multisit
 
 For the current modernization period, Agent should target:
 
-- Geeklog **2.1.1 through 2.2.2**;
-- PHP **5.6 through 8.3**;
+- Geeklog **2.2.2 and later**;
+- PHP **5.6.40 through maintained PHP 8.x versions**, according to the plugin release matrix;
 - mono-site and multisite installations;
 - no Core modification for the initial roadmap.
 

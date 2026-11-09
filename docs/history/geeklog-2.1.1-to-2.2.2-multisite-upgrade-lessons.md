@@ -1,6 +1,6 @@
 # Geeklog 2.1.1 → 2.2.2: multisite upgrade field guide
 
-> **Historical migration guide, October 2026.** This guide documents an actual migration of 15 Geeklog sites from the Geeklog 2.1.1 era to 2.2.2. It is **not** a requirement to maintain runtime compatibility with Geeklog 2.1.1. The active development baseline is Geeklog 2.2.2 and PHP 5.6.40; see [runtime support policy](geeklog-runtime-support-policy.md).
+> **Historical migration guide, October 2026.** This guide documents an actual migration of 15 Geeklog sites from the Geeklog 2.1.1 era to 2.2.2. It is **not** a requirement to maintain runtime compatibility with Geeklog 2.1.1. The active development baseline is Geeklog 2.2.2 and PHP 5.6.40; see [runtime support policy](../policy/geeklog-runtime-support-policy.md).
 >
 > **Scope:** practical risk controls and failure modes from one shared-files, separate-databases deployment. File paths, SQL statements, version checkpoints, and plugin choices are illustrative, not universal recipes. Do not run destructive SQL or change a stored database version merely because it worked on another site.
 
@@ -68,7 +68,7 @@ Repeat for the next site
 Reopen sites one by one; restore reviewed crons; remove public installer
 ```
 
-Protect shared `siteconfig.php` / `db-config.php` from installer overwrites. Site-specific bootstrap paths must be chosen **before** Core logger, template, cache and other services initialize. See [multisite development principles](multisite-development-principles.md) and [shared-files upgrade safety](plugin-shared-files-upgrade-safety.md).
+Protect shared `siteconfig.php` / `db-config.php` from installer overwrites. Site-specific bootstrap paths must be chosen **before** Core logger, template, cache and other services initialize. See [multisite development principles](../operations/multisite-development-principles.md) and [shared-files upgrade safety](../operations/plugin-shared-files-upgrade-safety.md).
 
 The upgrade installer should verify the **active site's** directories, not warn about hard-coded default paths from another site's configuration.
 
@@ -197,12 +197,12 @@ These are **recommendations learned from this deployment**, not a claim that cur
 
 ## Related references
 
-- [Multisite development principles](multisite-development-principles.md)
-- [Shared-files plugin upgrade safety](plugin-shared-files-upgrade-safety.md)
-- [Plugin configuration migration to Geeklog 2.2.2](plugin-configuration-migration-guide-2.2.2.md)
-- [Persistent plugin storage](plugin-persistent-storage-guide.md)
-- [Current runtime support policy](geeklog-runtime-support-policy.md)
+- [Multisite development principles](../operations/multisite-development-principles.md)
+- [Shared-files plugin upgrade safety](../operations/plugin-shared-files-upgrade-safety.md)
+- [Plugin configuration migration to Geeklog 2.2.2](../reference/plugin-configuration-migration-guide-2.2.2.md)
+- [Persistent plugin storage](../operations/plugin-persistent-storage-guide.md)
+- [Current runtime support policy](../policy/geeklog-runtime-support-policy.md)
 
 ## 8. Proposed maintenance architecture
 
-The historical lessons inform a separate proposal for future upgrade and legacy-SQL recovery. See [Geeklog Install / Upgrade / Rescue architecture](geeklog-installer-upgrade-rescue-architecture.md). The guide above records observed incidents; proposed features must not be mistaken for implemented functionality.
+The historical lessons inform a separate proposal for future upgrade and legacy-SQL recovery. See [Geeklog Install / Upgrade / Rescue architecture](../operations/geeklog-installer-upgrade-rescue-architecture.md). The guide above records observed incidents; proposed features must not be mistaken for implemented functionality.

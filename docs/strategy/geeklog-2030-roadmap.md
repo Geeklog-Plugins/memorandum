@@ -6,8 +6,8 @@
 
 The immediate modernization priority remains the stabilization of active plugins across:
 
-- **Geeklog 2.1.1 through 2.2.2**
-- **PHP 5.6 through PHP 8.1**
+- **Geeklog 2.2.2 and later**
+- **PHP 5.6.40 through maintained PHP 8.x releases, per project compatibility policy**
 
 This roadmap describes dependency principles for future architecture. It should influence interfaces where useful, but it must not force unfinished abstractions into plugins that still need stabilization.
 
@@ -70,7 +70,7 @@ Multisite-safe design applies now, even though the dedicated Multisite Manager i
 
 Data isolation, persistent storage, configuration and permissions should already be site-aware in active plugins.
 
-See [`multisite-development-principles.md`](multisite-development-principles.md).
+See [`multisite-development-principles.md`](../operations/multisite-development-principles.md).
 
 ---
 
