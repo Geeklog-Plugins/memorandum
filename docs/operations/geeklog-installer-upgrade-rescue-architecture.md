@@ -1,6 +1,6 @@
 # Geeklog Install / Upgrade / Rescue and legacy recovery architecture
 
-> **Status: architecture proposal (October 2026).** Planned features are not claims of completed code. Read alongside the [2.1.1 → 2.2.2 multisite field guide](geeklog-2.1.1-to-2.2.2-multisite-upgrade-lessons.md) and [runtime policy](geeklog-runtime-support-policy.md).
+> **Status: architecture proposal (October 2026).** Planned features are not claims of completed code. Read alongside the [2.1.1 → 2.2.2 multisite field guide](../history/geeklog-2.1.1-to-2.2.2-multisite-upgrade-lessons.md) and [runtime policy](../policy/geeklog-runtime-support-policy.md).
 
 ## Purpose
 

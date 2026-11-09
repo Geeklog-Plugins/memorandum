@@ -70,7 +70,7 @@ Multisite-safe design applies now, even though the dedicated Multisite Manager i
 
 Data isolation, persistent storage, configuration and permissions should already be site-aware in active plugins.
 
-See [`multisite-development-principles.md`](multisite-development-principles.md).
+See [`multisite-development-principles.md`](../operations/multisite-development-principles.md).
 
 ---
 

@@ -1,4 +1,4 @@
-> **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](geeklog-runtime-support-policy.md).
+> **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](../policy/geeklog-runtime-support-policy.md).
 
 # Geeklog Modernization Roadmap
 
@@ -136,7 +136,7 @@ Eclipse should remain a reference implementation rather than a mandatory depende
 
 The Multisite Manager itself can remain a later project. Multisite-safe development principles apply immediately to active plugins and themes.
 
-See [`multisite-development-principles.md`](multisite-development-principles.md).
+See [`multisite-development-principles.md`](../operations/multisite-development-principles.md).
 
 ## 8. Geeklog 2030
 
@@ -174,10 +174,10 @@ The immediate objective is to finish and stabilize existing modernization work b
 
 All active plugins and Eclipse should progressively follow:
 
-- [`plugin-persistent-storage-guide.md`](plugin-persistent-storage-guide.md)
-- [`multisite-development-principles.md`](multisite-development-principles.md)
-- [`plugin-configuration-migration-guide-2.2.2.md`](plugin-configuration-migration-guide-2.2.2.md) where Geeklog 2.2.2 configuration behavior is relevant
-- [`plugin-api-reference-2.2.2.md`](plugin-api-reference-2.2.2.md) as the minimum supported Core API reference
+- [`plugin-persistent-storage-guide.md`](../operations/plugin-persistent-storage-guide.md)
+- [`multisite-development-principles.md`](../operations/multisite-development-principles.md)
+- [`plugin-configuration-migration-guide-2.2.2.md`](../reference/plugin-configuration-migration-guide-2.2.2.md) where Geeklog 2.2.2 configuration behavior is relevant
+- [`plugin-api-reference-2.2.2.md`](../reference/plugin-api-reference-2.2.2.md) as the minimum supported Core API reference
 
 ## Projects on Hold
 
