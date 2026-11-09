@@ -6,7 +6,7 @@ Geeklog provides a native Plugin API hook that allows a plugin to add contextual
 
 This is useful for technical or ambiguous settings whose label alone does not explain the effect of changing the value. Plugins should prefer this native mechanism over adding custom JavaScript, custom tooltip libraries, or plugin-specific configuration templates.
 
-The hook has existed in Geeklog since at least **1.8.0** through the core dispatcher `PLG_getConfigTooltip()` and is therefore suitable for plugins that currently target Geeklog **2.1.1 through 2.2.2**.
+The hook has existed in Geeklog since at least **1.8.0** through the core dispatcher `PLG_getConfigTooltip()` and is available to plugins targeting the current Geeklog **2.2.2 and later** baseline.
 
 ---
 

@@ -34,7 +34,7 @@ Agent is responsible for the Geeklog-side generic layer:
 - capability discovery;
 - permission-aware access;
 - multisite isolation;
-- compatibility adapters across Geeklog 2.1.1–2.2.2;
+- feature detection for optional APIs introduced after Geeklog 2.2.2;
 - later authenticated resource/action APIs;
 - reusable descriptors suitable for REST/OpenAPI/MCP/other clients.
 

@@ -1157,13 +1157,13 @@ If a change was accidentally written to the wrong branch:
 - verify both branch heads afterward;
 - document the branch mistake if the development guide was not explicit enough to prevent recurrence.
 
-A mismatch such as `1.4.0-dev` in code while the archive is named `plugin_1.4.0_2.1.1.zip` creates unnecessary upgrade ambiguity and can cause false version differences.
+A mismatch such as `1.4.0-dev` in code while the archive is named `plugin_1.4.0_2.2.2.zip` creates unnecessary upgrade ambiguity and can cause false version differences.
 
 
 For repositories supporting multiple Geeklog compatibility artifacts, use an unambiguous convention such as:
 
 ```text
-plugin_1.4.0_2.1.1.zip
+plugin_1.4.0_2.2.2.zip
 plugin_1.4.0_2.2.2.zip
 ```
 
@@ -1252,7 +1252,7 @@ A practical shell check is:
 
 ```bash
 PLUGIN="myplugin"
-ARCHIVE="dist/myplugin_1.2.3_2.1.1.zip"
+ARCHIVE="dist/myplugin_1.2.3_2.2.2.zip"
 
 unzip -t "$ARCHIVE"
 

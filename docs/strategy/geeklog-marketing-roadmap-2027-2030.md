@@ -6,10 +6,10 @@
 
 This roadmap does not override the current modernization priority for active plugins, which remains:
 
-- Geeklog 2.1.1 through 2.2.2;
-- PHP 5.6 through PHP 8.1.
+- Geeklog 2.2.2 and later;
+- PHP 5.6.40 through maintained PHP 8.x versions, per project compatibility policy.
 
-When Marketing implementation begins, its exact minimum runtime may be reassessed. Until then, active plugin modernization should not depend on Marketing.
+When Marketing implementation begins, its exact supported runtime matrix may be reassessed, but Geeklog 2.2.2 remains the minimum unless the shared policy is explicitly revised. Until then, active plugin modernization should not depend on Marketing.
 
 ## Objective
 
