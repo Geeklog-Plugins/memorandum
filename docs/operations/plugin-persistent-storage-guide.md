@@ -4,7 +4,7 @@
 
 This guide defines practical rules for storing persistent plugin data safely across the current compatibility range:
 
-- **Geeklog 2.1.1 through 2.2.2**
+- **Geeklog 2.2.2 and later**
 - **PHP 5.6 through PHP 8.1**
 
 It is based on issues encountered while modernizing plugins that store documents, videos, generated assets or other data outside normal SQL tables.
@@ -121,7 +121,7 @@ Storage helpers intended for the current modernization period must remain valid 
 
 Avoid syntax introduced after PHP 5.6 in shared plugin code.
 
-The storage concept should work the same way on Geeklog 2.1.1 and 2.2.2 even if surrounding installer or configuration APIs require version-specific compatibility code.
+The storage concept must work on Geeklog 2.2.2 and later; preserve historical stored data without keeping unsupported Core runtime shims.
 
 ## Recommended tests
 

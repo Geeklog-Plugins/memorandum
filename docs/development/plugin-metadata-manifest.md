@@ -172,7 +172,7 @@ and the repository contains:
 admin/images/maps.png
 ```
 
-with Geeklog 2.1.1 and PHP 5.6.0 as its maintained minimum requirements, then the static manifest can be:
+with Geeklog 2.2.2 and PHP 5.6.40 as its maintained minimum requirements, then the static manifest can be:
 
 ```json
 {

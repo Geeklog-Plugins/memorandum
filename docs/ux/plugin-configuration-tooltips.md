@@ -164,7 +164,7 @@ For modernization work in the current Geeklog-Plugins compatibility range:
 
 The configuration tooltip hook is part of Geeklog's native Plugin API and is preferable to a custom UI implementation.
 
-Plugins supporting Geeklog 2.1.1 through 2.2.2 should still test the resulting Configuration page on both generations because surrounding configuration rendering differs between Geeklog versions even when the hook itself is available.
+Plugins should test the Configuration page on Geeklog 2.2.2 and newer supported releases when their rendering differs.
 
 The callback should remain lightweight. Do not perform database migrations, expensive scans, or state-changing actions while Geeklog is merely rendering configuration help.
 

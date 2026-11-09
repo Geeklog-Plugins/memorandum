@@ -21,7 +21,7 @@ The objective is to make it possible to answer, for any addressable Geeklog cont
 
 The intended compatibility target for current modernization work remains:
 
-- **Geeklog 2.1.1 through 2.2.2**
+- **Geeklog 2.2.2 and later**
 - **PHP 5.6 through PHP 8.1**
 
 ---
@@ -140,7 +140,7 @@ They should also expose deterministic item-to-URL resolution where appropriate:
 plugin_idtourl_PLUGIN($sub_type, $item_id)
 ```
 
-For plugins supporting Geeklog 2.1.1, namespaced IDs should remain sufficient to identify subtypes when `sub_type` is unavailable.
+For Geeklog 2.2.2+ plugins, use documented Item Info subtype capabilities when available; retain namespaced IDs where they simplify interoperability.
 
 Example:
 

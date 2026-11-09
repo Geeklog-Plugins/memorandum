@@ -285,7 +285,7 @@ Before creating plugin-local navigation, use this decision order:
 
 The convention is plain HTML/CSS and is suitable for the current modernization target:
 
-- Geeklog 2.1.1 through 2.2.2;
+- Geeklog 2.2.2 and later;
 - PHP 5.6 through PHP 8.1.
 
 It complements Geeklog Core; it does not replace `plugin_getadminoption_<plugin>()`, `plugin_cclabel_<plugin>()`, `ADMIN_createMenu()` or the Plugin API.
