@@ -1,5 +1,8 @@
 > **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](../policy/geeklog-runtime-support-policy.md).
 
+> **Official Core reference:** Consult the [Geeklog documentation source](https://github.com/Geeklog-Core/documentation) and [published documentation](https://geeklog-core.github.io/documentation/) for Core installation, configuration, administration and developer APIs. Check API specifics against the [Geeklog 2.2.2 source](https://github.com/Geeklog-Core/geeklog/tree/v2.2.2). This guide adds recommended plugin engineering practices, not official Core requirements. Documentation migration drafts are not implemented API guarantees.
+
+
 # Geeklog Plugin Development Guide
 
 A practical, end-to-end guide for building a Geeklog plugin that is installable, activatable, deactivatable, configurable, administrable, publicly usable, upgradeable, packageable, and compliant with the current Memorandum development expectations.

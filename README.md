@@ -17,6 +17,12 @@ The authoritative rule is [Runtime support policy](docs/policy/geeklog-runtime-s
 - [Modernization roadmap](docs/strategy/geeklog-modernization-roadmap.md) — near-term priorities.
 - [Documentation index](docs/README.md) — complete catalog organized by subject.
 
+## Official Geeklog documentation
+
+Consult the [Geeklog Core documentation repository](https://github.com/Geeklog-Core/documentation) and its [published documentation website](https://geeklog-core.github.io/documentation/) for installation, configuration, administration, development and Core API behavior.
+
+This Memorandum supplements—not replaces—the official documentation with project-specific engineering guidelines, operational lessons and proposed plugin contracts. Verify version-specific APIs and behavior against the [Geeklog Core source](https://github.com/Geeklog-Core/geeklog/tree/v2.2.2) and release notes; drafts and unfinished migrations in the documentation repository are not guarantees of implemented Core features.
+
 ## Scope and ownership
 
 Keep Core behavior and existing API facts separate from recommended conventions and proposed future integrations. A plugin remains responsible for its own data, ACL checks and upgrades. Shared contracts are optional design targets until implemented and verified. Never introduce Geeklog 2.1.1 shims for new work. Historical migration examples may remain available, clearly labeled.

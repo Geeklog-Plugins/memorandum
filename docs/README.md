@@ -2,6 +2,14 @@
 
 **Policy:** Geeklog 2.2.2+ only for all active development. PHP 5.6.40 remains the minimum where required by the runtime policy. See [runtime policy](policy/geeklog-runtime-support-policy.md). Historical references to Geeklog 2.1.1 are not active requirements.
 
+## Official documentation and source references
+
+- [Geeklog Core documentation repository](https://github.com/Geeklog-Core/documentation) — maintained Markdown documentation for usage, administration and development.
+- [Published Geeklog documentation](https://geeklog-core.github.io/documentation/) — user-facing guides and technical references, including version-labelled material.
+- [Geeklog Core 2.2.2 source](https://github.com/Geeklog-Core/geeklog/tree/v2.2.2) — final authority for APIs and actual behavior at the minimum supported version.
+
+The official documentation project is still migrating some historical content. Distinguish published, version-verified references from draft or proposed material. Memorandum contracts remain project conventions rather than existing Geeklog Core APIs.
+
 ## History
 
 - [GEEKLOG_222_FEATURES_AND_POST_UPGRADE_CHECKLIST.md](history/GEEKLOG_222_FEATURES_AND_POST_UPGRADE_CHECKLIST.md)
