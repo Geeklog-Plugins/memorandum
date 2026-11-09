@@ -4,7 +4,7 @@
 
 This document defines practical public-facing design, usability and accessibility expectations for modernized Geeklog plugins. The goal is not to impose one visual theme, but to make plugin pages pleasant to read and use under different Geeklog themes while keeping business logic and presentation responsibilities separate.
 
-Compatibility target: Geeklog 2.1.1 through 2.2.2 and PHP 5.6 through PHP 8.1.
+Compatibility target: Geeklog 2.2.2 and later and PHP 5.6 through PHP 8.1.
 
 ## Theme independence
 

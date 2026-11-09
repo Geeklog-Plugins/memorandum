@@ -150,7 +150,7 @@ If users must clear their browser cache to see a normal plugin upgrade, asset ve
 
 ## Compatibility
 
-Projects targeting Geeklog 2.1.1 through 2.2.2 must verify that their chosen asset-loading mechanism works across that range and provide a narrow fallback where required.
+Projects targeting Geeklog 2.2.2 and later should use the 2.2.2 asset-loading baseline, guarding only APIs introduced in later supported releases.
 
 A project explicitly targeting only Geeklog 2.2.2 may use the 2.2.2-compatible path directly.
 

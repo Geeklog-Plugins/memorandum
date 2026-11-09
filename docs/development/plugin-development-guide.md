@@ -1,4 +1,7 @@
-> **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](geeklog-runtime-support-policy.md).
+> **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](../policy/geeklog-runtime-support-policy.md).
+
+> **Official Core reference:** Consult the [Geeklog documentation source](https://github.com/Geeklog-Core/documentation) and [published documentation](https://geeklog-core.github.io/documentation/) for Core installation, configuration, administration and developer APIs. Check API specifics against the [Geeklog 2.2.2 source](https://github.com/Geeklog-Core/geeklog/tree/v2.2.2). This guide adds recommended plugin engineering practices, not official Core requirements. Documentation migration drafts are not implemented API guarantees.
+
 
 # Geeklog Plugin Development Guide
 
@@ -21,7 +24,7 @@ A modernized plugin should favor:
 - one generic provider contract instead of consumer-side branches for individual plugins;
 - one clear lifecycle path for install, upgrade, enable, disable, and uninstall;
 - shared helpers only when they remove real duplication or coupling;
-- isolated compatibility code when an older Geeklog version genuinely requires it;
+- isolated feature detection when a later supported Geeklog version introduces an optional API;
 - removal of obsolete paths once their replacement is proven;
 - explicit ownership of data, rendering, URLs, permissions, and business rules;
 - small coherent refactors over chains of local corrective patches.
@@ -45,15 +48,15 @@ Unless a plugin repository explicitly defines another policy, the current modern
 - Geeklog 2.2.2 and later;
 - PHP 5.6.40 through PHP 8.1 (and later supported versions).
 
-New code must therefore use the common safe PHP subset required by that range and must not assume that every Geeklog 2.2.2 facility exists unchanged in Geeklog 2.1.1.
+New code must use the supported PHP syntax subset and the Geeklog 2.2.2 API baseline. Do not implement Geeklog 2.1.1 runtime compatibility.
 
 See:
 
-- [Plugin API reference](plugin-api-reference-2.2.2.md)
-- [Configuration migration guide](plugin-configuration-migration-guide-2.2.2.md)
-- [Shared-files upgrade safety](plugin-shared-files-upgrade-safety.md)
-- [Plugin asset loading and cache versioning](plugin-asset-loading-versioning.md)
-- [Multisite development principles](multisite-development-principles.md)
+- [Plugin API reference](../reference/plugin-api-reference-2.2.2.md)
+- [Configuration migration guide](../reference/plugin-configuration-migration-guide-2.2.2.md)
+- [Shared-files upgrade safety](../operations/plugin-shared-files-upgrade-safety.md)
+- [Plugin asset loading and cache versioning](../ux/plugin-asset-loading-versioning.md)
+- [Multisite development principles](../operations/multisite-development-principles.md)
 
 ---
 
@@ -155,7 +158,7 @@ Common responsibilities:
 
 Plugin-owned static assets must not stop at “the file exists”. They should be external files, loaded only on relevant pages/contexts where practical, and use deterministic cache versioning. For administration assets, prefer a clear path such as `admin/css/admin.css` or `css/admin.css`, load it through the normal Geeklog header integration, and verify the asset is present in the packaged ZIP.
 
-See [Plugin asset loading and cache versioning](plugin-asset-loading-versioning.md).
+See [Plugin asset loading and cache versioning](../ux/plugin-asset-loading-versioning.md).
 
 Keep unconditional bootstrap code in `functions.inc` small. Any fatal error there can break every page on which Geeklog loads the plugin.
 
@@ -244,7 +247,7 @@ A consumer should not read another third-party plugin's private tables merely be
 - isolated and documented for later removal;
 - never generalized into arbitrary third-party SQL access.
 
-See [Plugin content interoperability contract](plugin-content-interoperability-contract.md).
+See [Plugin content interoperability contract](../contracts/plugin-content-interoperability-contract.md).
 
 ## Plan schema evolution now
 
@@ -349,7 +352,7 @@ Important distinctions:
 - guard expected arrays with `isset()` + `is_array()`;
 - do not assume a language/config file included earlier populated the current scope;
 - keep `functions.inc` bootstrap-safe because Geeklog may load it from several lifecycle paths;
-- test the real upload/autoinstall path on Geeklog 2.1.1, not only normal page bootstrap.
+- test the real upload/autoinstall path on Geeklog 2.2.2, not only normal page bootstrap.
 
 A plugin that works after manual file placement can still fail during archive upload if this scope behavior is not tested.
 
@@ -451,8 +454,8 @@ Keep tooltip text in language files, return an empty string safely for unknown k
 
 See:
 
-- [Configuration migration guide](plugin-configuration-migration-guide-2.2.2.md)
-- [Plugin configuration tooltips](plugin-configuration-tooltips.md)
+- [Configuration migration guide](../reference/plugin-configuration-migration-guide-2.2.2.md)
+- [Plugin configuration tooltips](../ux/plugin-configuration-tooltips.md)
 
 ---
 
@@ -495,8 +498,8 @@ The first feeds Geeklog's administration menu; the second feeds Command & Contro
 
 See:
 
-- [Plugin admin navigation](plugin-admin-navigation.md)
-- [Plugin administration UX guidelines](plugin-admin-ux-guidelines.md)
+- [Plugin admin navigation](../ux/plugin-admin-navigation.md)
+- [Plugin administration UX guidelines](../ux/plugin-admin-ux-guidelines.md)
 
 ## First-use documentation
 
@@ -571,8 +574,8 @@ For every significant public surface, review:
 
 See:
 
-- [Plugin public design guidelines](plugin-public-design-guidelines.md)
-- [Plugin SEO public page guidelines](plugin-seo-public-page-guidelines.md)
+- [Plugin public design guidelines](../ux/plugin-public-design-guidelines.md)
+- [Plugin SEO public page guidelines](../ux/plugin-seo-public-page-guidelines.md)
 
 ## Public navigation
 
@@ -786,7 +789,7 @@ When one provider exposes several object families:
 - do not model POST-only, cookie-only, or session-only UI state as a stable resource; an addressable container should have a canonical provider-owned GET URL;
 - consider optional `is-container`, `parent-id`, and `parent-subtype` fields for lightweight hierarchy.
 
-This keeps the same resource usable on Geeklog 2.1.1 while allowing Geeklog 2.2.2 to carry richer subtype information.
+This keeps resources interoperable with the Geeklog 2.2.2 Item Info subtype contract.
 
 ## Keep provider families distinct
 
@@ -824,9 +827,9 @@ Third-party plugin tables and private routing rules must remain private.
 
 See:
 
-- [Plugin API reference](plugin-api-reference-2.2.2.md)
-- [Plugin content interoperability contract](plugin-content-interoperability-contract.md)
-- [Plugin capability contract](plugin-capability-contract.md)
+- [Plugin API reference](../reference/plugin-api-reference-2.2.2.md)
+- [Plugin content interoperability contract](../contracts/plugin-content-interoperability-contract.md)
+- [Plugin capability contract](../contracts/plugin-capability-contract.md)
 
 ## Validate against real consumers, not only the written contract
 
@@ -863,7 +866,7 @@ The acceptance test must prove that:
 - container and leaf ACL/publication state remain consistent across discovery and rendering;
 - the consumer does not need a provider-specific exception.
 
-See the **FAQ contextual associations reference consumer profile** in [Plugin content interoperability contract](plugin-content-interoperability-contract.md).
+See the **FAQ contextual associations reference consumer profile** in [Plugin content interoperability contract](../contracts/plugin-content-interoperability-contract.md).
 
 ---
 
@@ -895,7 +898,7 @@ Modernized content providers (including Documents, Videos, Maps, FAQ, Downloads 
 
 Keep multi-property concrete-item results ordered and keep wildcard `'*'` collections structured, even for a one-field collection query. Do not apply single-property flattening to collections.
 
-Before marking a provider release-ready, test through **Geeklog's dispatcher**: scalar `'url'` and `'title'` lookups; ordered `'id,title,url'` lookup; `'*'` collection; missing/inaccessible IDs; and a public What's New block containing plugin comments. Consumer-side legacy shape normalization remains required separately. See [Plugin content interoperability contract](plugin-content-interoperability-contract.md#single-property-compatibility-with-native-geeklog-consumers).
+Before marking a provider release-ready, test through **Geeklog's dispatcher**: scalar `'url'` and `'title'` lookups; ordered `'id,title,url'` lookup; `'*'` collection; missing/inaccessible IDs; and a public What's New block containing plugin comments. Consumer-side legacy shape normalization remains required separately. See [Plugin content interoperability contract](../contracts/plugin-content-interoperability-contract.md#single-property-compatibility-with-native-geeklog-consumers).
 
 ## Normalize historical Item Info return shapes at consumer boundaries
 
@@ -936,7 +939,7 @@ Requirements:
 - filenames sanitized/generated safely;
 - database records and file lifecycle kept consistent.
 
-See [Plugin persistent storage guide](plugin-persistent-storage-guide.md).
+See [Plugin persistent storage guide](../operations/plugin-persistent-storage-guide.md).
 
 ---
 
@@ -973,8 +976,8 @@ The upgrade must still normalize the database to the current schema. Runtime com
 
 See:
 
-- [Multisite development principles](multisite-development-principles.md)
-- [Shared-files upgrade safety](plugin-shared-files-upgrade-safety.md)
+- [Multisite development principles](../operations/multisite-development-principles.md)
+- [Shared-files upgrade safety](../operations/plugin-shared-files-upgrade-safety.md)
 
 ---
 
@@ -1154,13 +1157,13 @@ If a change was accidentally written to the wrong branch:
 - verify both branch heads afterward;
 - document the branch mistake if the development guide was not explicit enough to prevent recurrence.
 
-A mismatch such as `1.4.0-dev` in code while the archive is named `plugin_1.4.0_2.1.1.zip` creates unnecessary upgrade ambiguity and can cause false version differences.
+A mismatch such as `1.4.0-dev` in code while the archive is named `plugin_1.4.0_2.2.2.zip` creates unnecessary upgrade ambiguity and can cause false version differences.
 
 
 For repositories supporting multiple Geeklog compatibility artifacts, use an unambiguous convention such as:
 
 ```text
-plugin_1.4.0_2.1.1.zip
+plugin_1.4.0_2.2.2.zip
 plugin_1.4.0_2.2.2.zip
 ```
 
@@ -1172,7 +1175,7 @@ Do not encode a Geeklog version in the filename if the same archive supports the
 
 A release workflow should not merely run tests on the repository and then assume the ZIP is correct.
 
-For Geeklog 2.1.1-compatible packages, the ZIP **must contain one top-level directory whose name is the plugin id**. The plugin files must live inside that directory.
+For historical Geeklog 2.1.1 packages (archival note only, not the current release target), the ZIP **must contain one top-level directory whose name is the plugin id**. The plugin files must live inside that directory.
 
 Correct:
 
@@ -1249,7 +1252,7 @@ A practical shell check is:
 
 ```bash
 PLUGIN="myplugin"
-ARCHIVE="dist/myplugin_1.2.3_2.1.1.zip"
+ARCHIVE="dist/myplugin_1.2.3_2.2.2.zip"
 
 unzip -t "$ARCHIVE"
 
@@ -1360,7 +1363,7 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] duplicate callback definitions are guarded by CI/source-contract tests where useful;
 - [ ] plugin-owned globals used by `functions.inc` / `install_defaults.php` are explicitly declared for autoinstall scope;
 - [ ] language/config/default arrays are validated before merge/use;
-- [ ] real Geeklog 2.1.1 upload/autoinstall path tested, not only normal bootstrap;
+- [ ] real Geeklog 2.2.2 upload/autoinstall path tested, not only normal bootstrap;
 - [ ] disabled plugin does not leave callable public/admin behavior unintentionally active.
 
 ## Administration
@@ -1447,11 +1450,13 @@ A plugin should not be called operational until the relevant checks pass.
 
 - [ ] PHP 5.6 syntax/runtime tested where still supported;
 - [ ] PHP 8.1 syntax/runtime tested;
-- [ ] Geeklog 2.1.1 runtime tested where supported;
+- [ ] Geeklog 2.2.2 minimum runtime tested;
 - [ ] Geeklog 2.2.2 runtime tested;
 - [ ] no unsupported syntax slipped into shipped files.
 
 ## Packaging
+
+> Historical Geeklog 2.1.1 packaging examples below are retained only as migration background. New releases must be validated on Geeklog 2.2.2+.
 
 - [ ] installable ZIP produced;
 - [ ] root folder correct;
@@ -1629,7 +1634,7 @@ A practical maintenance rule is:
 
 ✅ declare plugin-owned globals explicitly
 ✅ validate arrays before array_merge() or indexed access
-✅ test the actual Geeklog 2.1.1 upload/autoinstall path
+✅ test the actual Geeklog 2.2.2 upload/autoinstall path
 ```
 
 Geeklog 2.1.1 can include plugin files from inside `plugin_do_autoinstall()`, so those files inherit function scope. A plugin may therefore work during normal requests but fail only while being installed from an uploaded archive.
@@ -1773,19 +1778,19 @@ Use this guide as the starting point, then move to the detailed references when 
 
 | Need | Reference |
 | --- | --- |
-| Existing Plugin API callbacks | [plugin-api-reference-2.2.2.md](plugin-api-reference-2.2.2.md) |
-| Configuration and existing-install migration | [plugin-configuration-migration-guide-2.2.2.md](plugin-configuration-migration-guide-2.2.2.md) |
-| Configuration contextual help/tooltips | [plugin-configuration-tooltips.md](plugin-configuration-tooltips.md) |
-| Admin menus and local section navigation | [plugin-admin-navigation.md](plugin-admin-navigation.md) |
-| Administration usability and first-use help | [plugin-admin-ux-guidelines.md](plugin-admin-ux-guidelines.md) |
-| CSS/JS loading, cache-busting and packaged assets | [plugin-asset-loading-versioning.md](plugin-asset-loading-versioning.md) |
-| Public design, responsive behavior and accessibility | [plugin-public-design-guidelines.md](plugin-public-design-guidelines.md) |
-| Public page SEO baseline | [plugin-seo-public-page-guidelines.md](plugin-seo-public-page-guidelines.md) |
-| Persistent files | [plugin-persistent-storage-guide.md](plugin-persistent-storage-guide.md) |
-| Multisite constraints | [multisite-development-principles.md](multisite-development-principles.md) |
-| Shared files with independently upgraded sites | [plugin-shared-files-upgrade-safety.md](plugin-shared-files-upgrade-safety.md) |
-| Structured content interoperability | [plugin-content-interoperability-contract.md](plugin-content-interoperability-contract.md) |
-| Capability discovery/services/dashboard contracts | [plugin-capability-contract.md](plugin-capability-contract.md) |
+| Existing Plugin API callbacks | [plugin-api-reference-2.2.2.md](../reference/plugin-api-reference-2.2.2.md) |
+| Configuration and existing-install migration | [plugin-configuration-migration-guide-2.2.2.md](../reference/plugin-configuration-migration-guide-2.2.2.md) |
+| Configuration contextual help/tooltips | [plugin-configuration-tooltips.md](../ux/plugin-configuration-tooltips.md) |
+| Admin menus and local section navigation | [plugin-admin-navigation.md](../ux/plugin-admin-navigation.md) |
+| Administration usability and first-use help | [plugin-admin-ux-guidelines.md](../ux/plugin-admin-ux-guidelines.md) |
+| CSS/JS loading, cache-busting and packaged assets | [plugin-asset-loading-versioning.md](../ux/plugin-asset-loading-versioning.md) |
+| Public design, responsive behavior and accessibility | [plugin-public-design-guidelines.md](../ux/plugin-public-design-guidelines.md) |
+| Public page SEO baseline | [plugin-seo-public-page-guidelines.md](../ux/plugin-seo-public-page-guidelines.md) |
+| Persistent files | [plugin-persistent-storage-guide.md](../operations/plugin-persistent-storage-guide.md) |
+| Multisite constraints | [multisite-development-principles.md](../operations/multisite-development-principles.md) |
+| Shared files with independently upgraded sites | [plugin-shared-files-upgrade-safety.md](../operations/plugin-shared-files-upgrade-safety.md) |
+| Structured content interoperability | [plugin-content-interoperability-contract.md](../contracts/plugin-content-interoperability-contract.md) |
+| Capability discovery/services/dashboard contracts | [plugin-capability-contract.md](../contracts/plugin-capability-contract.md) |
 | Plugin metadata manifest | [plugin-metadata-manifest.md](plugin-metadata-manifest.md) |
 
 ---

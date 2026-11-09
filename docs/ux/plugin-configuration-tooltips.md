@@ -6,7 +6,7 @@ Geeklog provides a native Plugin API hook that allows a plugin to add contextual
 
 This is useful for technical or ambiguous settings whose label alone does not explain the effect of changing the value. Plugins should prefer this native mechanism over adding custom JavaScript, custom tooltip libraries, or plugin-specific configuration templates.
 
-The hook has existed in Geeklog since at least **1.8.0** through the core dispatcher `PLG_getConfigTooltip()` and is therefore suitable for plugins that currently target Geeklog **2.1.1 through 2.2.2**.
+The hook has existed in Geeklog since at least **1.8.0** through the core dispatcher `PLG_getConfigTooltip()` and is available to plugins targeting the current Geeklog **2.2.2 and later** baseline.
 
 ---
 
@@ -164,7 +164,7 @@ For modernization work in the current Geeklog-Plugins compatibility range:
 
 The configuration tooltip hook is part of Geeklog's native Plugin API and is preferable to a custom UI implementation.
 
-Plugins supporting Geeklog 2.1.1 through 2.2.2 should still test the resulting Configuration page on both generations because surrounding configuration rendering differs between Geeklog versions even when the hook itself is available.
+Plugins should test the Configuration page on Geeklog 2.2.2 and newer supported releases when their rendering differs.
 
 The callback should remain lightweight. Do not perform database migrations, expensive scans, or state-changing actions while Geeklog is merely rendering configuration help.
 
@@ -205,7 +205,7 @@ Only settings that benefit from additional explanation need entries.
 
 ## Relationship with the configuration migration guide
 
-This document complements [`plugin-configuration-migration-guide-2.2.2.md`](plugin-configuration-migration-guide-2.2.2.md).
+This document complements [`plugin-configuration-migration-guide-2.2.2.md`](../reference/plugin-configuration-migration-guide-2.2.2.md).
 
 The migration guide covers configuration storage, hierarchy, selection arrays, language metadata, and upgrade behavior. Configuration tooltips are a presentation/help capability layered on top of a correctly registered Geeklog configuration group; they do not replace `$LANG_confignames`, `$LANG_configsections`, `$LANG_configsubgroups`, `$LANG_tab`, `$LANG_fs`, or `$LANG_configselects` where those arrays are required.
 
