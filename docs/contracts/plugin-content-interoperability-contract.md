@@ -29,12 +29,12 @@ For capabilities that go beyond normalized content (dashboard summaries, diagnos
 
 For plugins currently being modernized, the working target remains:
 
-- **Geeklog 2.1.1 through 2.2.2**
+- **Geeklog 2.2.2 and later**
 - **PHP 5.6 through PHP 8.1**
 
 The interoperability layer should therefore use the common safe subset of both Geeklog and PHP generations wherever practical.
 
-Geeklog 2.2.2 provides additional lifecycle and URL-resolution capabilities that may not exist in the same form in Geeklog 2.1.1. New plugins should use those capabilities when available while retaining safe fallbacks for older supported versions.
+Geeklog 2.2.2 is the minimum supported API baseline. Use its lifecycle and URL-resolution capabilities directly; guard only facilities added in later supported releases.
 
 ---
 
@@ -84,7 +84,7 @@ The exact property set may vary by plugin, but commonly useful names should be k
 
 ## Single-property compatibility with native Geeklog consumers
 
-**Provider contract:** For a concrete item ID (not `'*'`), when `$what` requests exactly one property, return its **scalar value** (for example a URL string for `'url'`, a title string for `'title'`, or an empty string when unavailable). Do not return a one-element numeric or associative array. This preserves compatibility with native Geeklog 2.1.1/2.2.2 consumers, including the What's New comments renderer, which concatenates `PLG_getItemInfo($type, $id, 'url')` directly with `'#comments'`. Returning an array produces an *Array to string conversion* warning.
+**Provider contract:** For a concrete item ID (not `'*'`), when `$what` requests exactly one property, return its **scalar value** (for example a URL string for `'url'`, a title string for `'title'`, or an empty string when unavailable). Do not return a one-element numeric or associative array. This preserves compatibility with native Geeklog 2.2.2+ consumers, including the What's New comments renderer, which concatenates `PLG_getItemInfo($type, $id, 'url')` directly with `'#comments'`. Returning an array produces an *Array to string conversion* warning.
 
 For multiple requested properties on a concrete item, preserve the ordered positional result expected by existing Geeklog callers. For `$id === '*'`, retain the established **collection of records** contract, including when the collection requests one property; do not flatten collections into a scalar.
 
@@ -441,7 +441,7 @@ Lifecycle events are also useful to consumers such as XMLSitemap, which can reac
 
 # 4. Preserve `sub_type` when available
 
-Geeklog 2.1.1 and Geeklog 2.2.2 do not expose exactly the same lifecycle callback contract.
+The lifecycle callback contract in Geeklog 2.2.2 is the minimum supported baseline.
 
 Older supported installations may use a legacy callback form without `sub_type`, while Geeklog 2.2.2 can provide a subtype-aware lifecycle contract.
 
@@ -455,7 +455,7 @@ item_sub_type = NULL when unavailable
 
 A plugin should not require `sub_type` for its basic interoperability behavior unless the content model genuinely depends on it.
 
-This allows the same logical relation model to work across Geeklog 2.1.1 and 2.2.2.
+This allows the logical relation model to work on Geeklog 2.2.2 and later.
 
 ---
 
@@ -488,7 +488,7 @@ Potential consumers include:
 
 ## Compatibility fallback
 
-Because this capability is not available in the same form across the full Geeklog 2.1.1–2.2.2 range, the item URL should also remain obtainable through:
+For robust interoperability on Geeklog 2.2.2 and later, the item URL should also remain obtainable through:
 
 ```php
 plugin_getiteminfo_PLUGIN(..., 'url', ...)
@@ -506,7 +506,7 @@ For addressable content that has a normal full public view, modernized plugins s
 PLG_itemDisplay($id, $type)
 ```
 
-This dispatcher exists in **Geeklog 2.1.1 and Geeklog 2.2.2**, so it can be used across the current transition compatibility range without introducing a Hub-specific API or a separate 2.1.1 fallback.
+This dispatcher is available in the Geeklog 2.2.2 baseline and can be reused without introducing a Hub-specific API.
 
 Geeklog calls every active:
 
@@ -1182,7 +1182,7 @@ Before declaring a plugin "FAQ interoperable", test the following through a real
 [ ] the provider calls PLG_itemDisplay() on the intended public page
 [ ] the consumer still handles the previous supported/partially migrated consumer schema without breaking the provider page
 [ ] the saved FAQ/category renders on that page
-[ ] the same identity works on Geeklog 2.1.1 without requiring subtype transport
+[ ] the same identity works on Geeklog 2.2.2 with the documented subtype transport
 [ ] Geeklog 2.2.2 may additionally use subtype-aware callbacks without changing the stable ID
 ```
 

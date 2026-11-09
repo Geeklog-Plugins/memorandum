@@ -786,7 +786,7 @@ When one provider exposes several object families:
 - do not model POST-only, cookie-only, or session-only UI state as a stable resource; an addressable container should have a canonical provider-owned GET URL;
 - consider optional `is-container`, `parent-id`, and `parent-subtype` fields for lightweight hierarchy.
 
-This keeps the same resource usable on Geeklog 2.1.1 while allowing Geeklog 2.2.2 to carry richer subtype information.
+This keeps resources interoperable with the Geeklog 2.2.2 Item Info subtype contract.
 
 ## Keep provider families distinct
 
@@ -1172,7 +1172,7 @@ Do not encode a Geeklog version in the filename if the same archive supports the
 
 A release workflow should not merely run tests on the repository and then assume the ZIP is correct.
 
-For Geeklog 2.1.1-compatible packages, the ZIP **must contain one top-level directory whose name is the plugin id**. The plugin files must live inside that directory.
+For historical Geeklog 2.1.1 packages (archival note only, not the current release target), the ZIP **must contain one top-level directory whose name is the plugin id**. The plugin files must live inside that directory.
 
 Correct:
 
@@ -1452,6 +1452,8 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] no unsupported syntax slipped into shipped files.
 
 ## Packaging
+
+> Historical Geeklog 2.1.1 packaging examples below are retained only as migration background. New releases must be validated on Geeklog 2.2.2+.
 
 - [ ] installable ZIP produced;
 - [ ] root folder correct;
