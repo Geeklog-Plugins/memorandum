@@ -205,7 +205,7 @@ Only settings that benefit from additional explanation need entries.
 
 ## Relationship with the configuration migration guide
 
-This document complements [`plugin-configuration-migration-guide-2.2.2.md`](plugin-configuration-migration-guide-2.2.2.md).
+This document complements [`plugin-configuration-migration-guide-2.2.2.md`](../reference/plugin-configuration-migration-guide-2.2.2.md).
 
 The migration guide covers configuration storage, hierarchy, selection arrays, language metadata, and upgrade behavior. Configuration tooltips are a presentation/help capability layered on top of a correctly registered Geeklog configuration group; they do not replace `$LANG_confignames`, `$LANG_configsections`, `$LANG_configsubgroups`, `$LANG_tab`, `$LANG_fs`, or `$LANG_configselects` where those arrays are required.
 

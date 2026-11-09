@@ -1,4 +1,4 @@
-> **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](geeklog-runtime-support-policy.md).
+> **Current maintenance baseline (October 2026):** Geeklog 2.2.2 minimum; PHP 5.6.40 minimum. Previous Geeklog 2.1.1 compatibility discussion is historical migration context, not a requirement for new changes. See [runtime support policy](../policy/geeklog-runtime-support-policy.md).
 
 # Geeklog Multisite Development Principles
 
