@@ -13,7 +13,7 @@ For plugins and the Eclipse theme currently being modernized, the priority is to
 
 This allows plugins and Eclipse to be adopted before or during a staged Geeklog/PHP migration.
 
-Modernization should therefore use the safe common subset of PHP 5.6.40–8.1+ and isolate Geeklog-version compatibility code where newer APIs or theme capabilities are not available in Geeklog 2.1.1.
+Modernization should therefore use the safe common subset of PHP 5.6.40–8.1+ and use APIs available from Geeklog 2.2.2 onward; isolate later-version APIs behind feature detection when needed.
 
 ---
 
@@ -73,8 +73,8 @@ Modernization should therefore use the safe common subset of PHP 5.6.40–8.1+ a
 ### Priorities
 - Provide native support for Geeklog 2.2.2 and later.
 - Preserve PHP 5.6.40 through PHP 8.1 (and later supported versions) compatibility.
-- Use version-aware compatibility layers where Geeklog 2.2.2 introduces theme APIs or rendering behavior not present in Geeklog 2.1.1.
-- Avoid splitting Eclipse into incompatible legacy and modern editions where a clean compatibility layer can solve the difference.
+- Use the Geeklog 2.2.2 theme and rendering baseline; guard optional APIs introduced in later versions.
+- Avoid unnecessary compatibility layers for end-of-support Geeklog versions.
 - Stabilize the integration with Menu.
 - Make navigation robust when Geeklog caches are rebuilt or cleared.
 - Finalize the main frontend and admin layouts.
@@ -83,7 +83,7 @@ Modernization should therefore use the safe common subset of PHP 5.6.40–8.1+ a
 - Improve SEO, accessibility, and mobile behavior.
 - Test installation, activation, rendering and administration on both ends of the supported Geeklog and PHP ranges.
 
-The compatibility objective is strategic: an administrator should be able to adopt Eclipse on an existing Geeklog 2.1.1 / PHP 5.6 installation and retain it while migrating the site toward Geeklog 2.2.2 / PHP 8.1.
+The compatibility objective is to support Geeklog 2.2.2+ installations, including PHP 5.6.40 where the project supports it; Geeklog 2.1.1 runtime testing is out of scope.
 
 Eclipse should remain a reference implementation rather than a mandatory dependency for plugins.
 
@@ -177,7 +177,7 @@ All active plugins and Eclipse should progressively follow:
 - [`plugin-persistent-storage-guide.md`](plugin-persistent-storage-guide.md)
 - [`multisite-development-principles.md`](multisite-development-principles.md)
 - [`plugin-configuration-migration-guide-2.2.2.md`](plugin-configuration-migration-guide-2.2.2.md) where Geeklog 2.2.2 configuration behavior is relevant
-- [`plugin-api-reference-2.2.2.md`](plugin-api-reference-2.2.2.md) while checking for fallbacks required by Geeklog 2.1.1
+- [`plugin-api-reference-2.2.2.md`](plugin-api-reference-2.2.2.md) as the minimum supported Core API reference
 
 ## Projects on Hold
 

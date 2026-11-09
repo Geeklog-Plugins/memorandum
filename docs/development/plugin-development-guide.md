@@ -21,7 +21,7 @@ A modernized plugin should favor:
 - one generic provider contract instead of consumer-side branches for individual plugins;
 - one clear lifecycle path for install, upgrade, enable, disable, and uninstall;
 - shared helpers only when they remove real duplication or coupling;
-- isolated compatibility code when an older Geeklog version genuinely requires it;
+- isolated feature detection when a later supported Geeklog version introduces an optional API;
 - removal of obsolete paths once their replacement is proven;
 - explicit ownership of data, rendering, URLs, permissions, and business rules;
 - small coherent refactors over chains of local corrective patches.
@@ -45,7 +45,7 @@ Unless a plugin repository explicitly defines another policy, the current modern
 - Geeklog 2.2.2 and later;
 - PHP 5.6.40 through PHP 8.1 (and later supported versions).
 
-New code must therefore use the common safe PHP subset required by that range and must not assume that every Geeklog 2.2.2 facility exists unchanged in Geeklog 2.1.1.
+New code must use the supported PHP syntax subset and the Geeklog 2.2.2 API baseline. Do not implement Geeklog 2.1.1 runtime compatibility.
 
 See:
 
@@ -349,7 +349,7 @@ Important distinctions:
 - guard expected arrays with `isset()` + `is_array()`;
 - do not assume a language/config file included earlier populated the current scope;
 - keep `functions.inc` bootstrap-safe because Geeklog may load it from several lifecycle paths;
-- test the real upload/autoinstall path on Geeklog 2.1.1, not only normal page bootstrap.
+- test the real upload/autoinstall path on Geeklog 2.2.2, not only normal page bootstrap.
 
 A plugin that works after manual file placement can still fail during archive upload if this scope behavior is not tested.
 
@@ -1360,7 +1360,7 @@ A plugin should not be called operational until the relevant checks pass.
 - [ ] duplicate callback definitions are guarded by CI/source-contract tests where useful;
 - [ ] plugin-owned globals used by `functions.inc` / `install_defaults.php` are explicitly declared for autoinstall scope;
 - [ ] language/config/default arrays are validated before merge/use;
-- [ ] real Geeklog 2.1.1 upload/autoinstall path tested, not only normal bootstrap;
+- [ ] real Geeklog 2.2.2 upload/autoinstall path tested, not only normal bootstrap;
 - [ ] disabled plugin does not leave callable public/admin behavior unintentionally active.
 
 ## Administration
@@ -1447,7 +1447,7 @@ A plugin should not be called operational until the relevant checks pass.
 
 - [ ] PHP 5.6 syntax/runtime tested where still supported;
 - [ ] PHP 8.1 syntax/runtime tested;
-- [ ] Geeklog 2.1.1 runtime tested where supported;
+- [ ] Geeklog 2.2.2 minimum runtime tested;
 - [ ] Geeklog 2.2.2 runtime tested;
 - [ ] no unsupported syntax slipped into shipped files.
 
@@ -1629,7 +1629,7 @@ A practical maintenance rule is:
 
 ✅ declare plugin-owned globals explicitly
 ✅ validate arrays before array_merge() or indexed access
-✅ test the actual Geeklog 2.1.1 upload/autoinstall path
+✅ test the actual Geeklog 2.2.2 upload/autoinstall path
 ```
 
 Geeklog 2.1.1 can include plugin files from inside `plugin_do_autoinstall()`, so those files inherit function scope. A plugin may therefore work during normal requests but fail only while being installed from an uploaded archive.
